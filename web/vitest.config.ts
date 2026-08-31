@@ -1,33 +1,47 @@
 import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
+
+const srcRoot = fileURLToPath(new URL("./src", import.meta.url));
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": srcRoot,
+    },
+  },
   test: {
     passWithNoTests: true,
     projects: [
       {
+        extends: true,
         test: {
           name: "unit",
           include: ["tests/domain/**/*.test.ts", "tests/components/**/*.test.tsx"],
           environment: "node",
           setupFiles: ["src/test/setup.ts"],
+          fileParallelism: false,
         },
       },
       {
+        extends: true,
         test: {
           name: "integration",
           include: ["tests/database/**/*.integration.test.ts", "tests/auth/**/*.integration.test.ts", "tests/services/**/*.integration.test.ts", "tests/api/**/*.integration.test.ts"],
           environment: "node",
           setupFiles: ["src/test/setup.ts"],
           sequence: { concurrent: false, setupFiles: "list" },
+          fileParallelism: false,
         },
       },
       {
+        extends: true,
         test: {
           name: "operations",
           include: ["tests/operations/**/*.integration.test.ts"],
           environment: "node",
           setupFiles: ["src/test/setup.ts"],
           sequence: { concurrent: false, setupFiles: "list" },
+          fileParallelism: false,
         },
       },
     ],

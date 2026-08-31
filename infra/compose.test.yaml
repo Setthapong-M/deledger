@@ -5,16 +5,22 @@ services:
     build:
       context: ..
       dockerfile: db/Dockerfile
+    command: ["postgres", "-c", "hba_file=/etc/postgresql/pg_hba.conf", "-c", "shared_preload_libraries=pg_cron", "-c", "cron.database_name=deledger_test", "-c", "cron.timezone=Asia/Bangkok"]
     environment:
       POSTGRES_DB: deledger_test
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: test-only-placeholder
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
+      DELEDGER_WEB_PASSWORD: test-web-password
+      DELEDGER_MAINTENANCE_PASSWORD: test-maintenance-password
+      DELEDGER_OPERATOR_PASSWORD: test-operator-password
     ports:
       - "127.0.0.1:55432:5432"
     networks:
       - data-test
     volumes:
-      - deledger_test_pgdata:/var/lib/postgresql/data
+      - deledger_test_pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d deledger_test"]
       interval: 2s

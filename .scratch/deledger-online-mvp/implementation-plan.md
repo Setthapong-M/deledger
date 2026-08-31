@@ -4,7 +4,7 @@ Date: 2026-08-31
 Author: Codex
 Source repository: `Setthapong-M/deledger`
 Source branch: `main`
-Status: in progress — Gate 1
+Status: in progress — Gate 3
 Predecessors: `Online Deledger MVP — Executable Technical Specification`, `Wayfinder: Online Deledger MVP`, ADR 0001–0006
 
 > 🤖 **Execution method:** ใช้ sequential gated implementation + vertical-slice TDD ใน source repository นี้โดยตรง ทุก behavior ทำ Red → Green ทีละ test ผ่าน public seam และ commit เฉพาะสถานะ Green แต่ละ Gate ต้องผ่าน automated tests, Audit และ Build check ก่อน push checkpoint เพราะ schema → identity → domain operations → HTTP contracts → UI → deployment พึ่งพากันตามลำดับ ห้ามใช้ PARA workspace กับแผนนี้
@@ -627,7 +627,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - `web/src/test/setup.ts` installs Testing Library DOM matchers and deterministic cleanup only; it must not mock Deledger modules, network, database or time globally. The remaining support modules are created together with their first consumer in Gates 2, 3 and 5.
   - **Audit:** Vitest config loads with `--passWithNoTests`; Playwright lists four projects; Compose test config proves exact DB build path plus loopback-only/disposable resources. No behavioral test is added until its Red step.
 
-- [ ] **1.5 Commit and push Gate 1 checkpoint** `gate` `verify`
+- [x] **1.5 Commit and push Gate 1 checkpoint** `gate` `verify`
   - Stage only Gate 1 paths plus the approved existing project docs/agent configuration allowlist; generated HTML preview and `prototypes/` remain unstaged.
   - Run Gate 1 build/test-harness checks, staged diff/secret checks, then commit with `chore: scaffold Deledger workspace and test harness`.
   - Push with `git push --set-upstream origin online-mvp`; confirm local HEAD equals `origin/online-mvp`.
@@ -635,14 +635,14 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
 
 ## Gate 2 — PostgreSQL schema, roles, RLS and derived Month View
 
-- [ ] **2.1 Build the pinned PostgreSQL + pg_cron image and role bootstrap** `migration` `high`
+- [x] **2.1 Build the pinned PostgreSQL + pg_cron image and role bootstrap** `migration` `high`
   - Red: create `web/src/test/factories.ts` and `web/src/test/postgres.ts` only for the first role/extension/image cases in `web/tests/database/persistence.integration.test.ts`; require failure before image/bootstrap exists.
   - Base `db/Dockerfile` on `postgres:18.6-bookworm`; compile pg_cron tag `v1.6.7` in a builder stage and copy only the extension artifacts into runtime.
   - `db/init/001_roles.sh` must create/update `deledger_web`, `deledger_maintenance`, and `deledger_operator` with SCRAM passwords read from environment, all `NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`; migration owner remains the container bootstrap role.
   - Set `shared_preload_libraries=pg_cron`, `cron.database_name=deledger`, `cron.timezone=Asia/Bangkok`, and disallow trust authentication.
   - **Audit:** persistence integration test inspects `pg_roles` and fails if the web role owns any table or has `rolsuper`, `rolbypassrls`, `rolcreaterole`, or `rolcreatedb`.
 
-- [ ] **2.2 Add immutable schema migrations for the seven owner-scoped tables** `migration` `high`
+- [x] **2.2 Add immutable schema migrations for the seven owner-scoped tables** `migration` `high`
   - Red: add one constraint behavior at a time to `web/tests/database/persistence.integration.test.ts`, run it to failure, then implement only the migration needed for Green.
   - `202608310001_extensions.cjs`: enable `pg_cron` and `pgcrypto`; record migration extension requirements.
   - `202608310002_schema.cjs`: create `app_user`, `user_identity_email`, `user_archive_period`, `reporting_month`, `balance_snapshot`, `monthly_recurring_expense`, `monthly_expense_detail` exactly as specification section 7.
@@ -651,7 +651,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Down migrations may remove only objects owned by the migration being rolled back and are never run against production automatically.
   - **Audit:** inspect `information_schema`, `pg_constraint`, and indexes against the seven-table contract; grep migrations to confirm no `real`, `double precision`, `money`, `float`, cascade delete or eighth financial table.
 
-- [ ] **2.3 Force RLS and expose only narrow identity/maintenance functions** `migration` `security` `high`
+- [x] **2.3 Force RLS and expose only narrow identity/maintenance functions** `migration` `security` `high`
   - Red: `web/tests/database/rls.integration.test.ts` first proves that guessed owner IDs currently cross the boundary, then each RLS policy/grant change makes the observable isolation case Green.
   - `202608310003_rls.cjs`: enable and force RLS on all seven tables; owner predicate is `NULLIF(current_setting('deledger.user_id', true), '')::uuid`, using `id` for `app_user` and `owner_id` elsewhere.
   - Revoke public/schema defaults; grant web only the exact table operations required for User flows. General identity SELECT/DELETE and hard-delete permissions stay absent.
@@ -659,7 +659,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - `202608310005_cron.cjs`: schedule catch-up at `5 0 * * *` with stable job name; migration first unschedules same-name job to remain idempotent.
   - **Audit:** automated RLS suite uses two temporary owner contexts plus a missing context to prove cross-owner SELECT/INSERT/UPDATE/DELETE all fail; it inspects `prosecdef` and `proconfig` for every definer function.
 
-- [ ] **2.4 Implement DB boundary and derived Month View query** `backend` `high`
+- [x] **2.4 Implement DB boundary and derived Month View query** `backend` `high`
   - Red: add acceptance scenarios 1–3 and reconciliation literals to `web/tests/domain/month-view.test.ts`, plus public persistence behavior to `web/tests/database/persistence.integration.test.ts`; implement one slice at a time.
   - `pool.ts` exports one server-only `pg.Pool` with bounded connections and no query logging.
   - `transaction.ts` provides leased-client transaction helpers; `rls.ts` owns transaction-local `set_config` and never uses session-level `SET`.
@@ -668,7 +668,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - `month-view.ts` maps PostgreSQL numeric/bigint values directly to strings and implements the exact `MonthView` contract above; `allowed-actions.ts` derives action flags from server state/business date.
   - **Audit:** `pnpm test:unit` and the persistence/RLS integration files pass against disposable PostgreSQL; expected values are literal spec examples rather than production-helper calculations.
 
-- [ ] **2.5 Commit and push Gate 2 checkpoint** `gate` `verify`
+- [x] **2.5 Commit and push Gate 2 checkpoint** `gate` `verify`
   - Run domain + persistence + RLS suites, lint/typecheck, DB image/migration checks and staged safety checks.
   - Commit Green test/implementation state with `feat(db): add isolated monthly accounting model`, then `git push origin online-mvp`.
   - **Audit:** remote checkpoint contains migrations and their behavior tests together; HEAD equals remote and no migration is edited after this commit.

@@ -14,6 +14,6 @@ if (parsed.hostname !== "127.0.0.1" || parsed.port !== "55432" || !parsed.pathna
 }
 
 const compose = ["compose", "-f", "infra/compose.test.yaml", "--project-name", "deledger_test"];
-const args = command === "up" ? [...compose, "up", "-d", "--wait"] : command === "down" ? [...compose, "down"] : [...compose, "down", "-v", "--remove-orphans"];
+const args = command === "up" ? [...compose, "up", "-d", "--build", "--wait"] : command === "down" ? [...compose, "down"] : [...compose, "down", "-v", "--remove-orphans"];
 const result = spawnSync("docker", args, { stdio: "inherit" });
 process.exit(result.status ?? 1);
