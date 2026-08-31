@@ -739,7 +739,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
 
 ## Gate 5 — JSON Route Handlers and frozen API contracts
 
-- [ ] **5.1 Build one strict Route Handler adapter** `backend` `high`
+- [x] **5.1 Build one strict Route Handler adapter** `backend` `high`
   - Red: create `web/src/test/api-harness.ts` for the first HTTP test, then add one behavior at a time to `web/tests/api/contracts.integration.test.ts` using a real `Request`, real signed token and disposable DB; do not mock services/repositories.
   - `schemas.ts` defines closed Zod schemas for dates, MonthKey, UUID, decimal Money and every payload/query from specification section 11; unknown fields fail.
   - `route-handler.ts` enforces JSON content type and exact `Origin === APP_ORIGIN` for mutations, obtains request ID, executes only services through identity transaction, and maps domain errors to the fixed HTTP/code table.
@@ -747,7 +747,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Route error logging uses the safe allowlist; unexpected errors return `INTERNAL_ERROR` without stack or secret.
   - **Audit:** API contract suite covers malformed JSON, unknown fields, wrong origin/content type and missing revision; source check fails on SQL/repository imports in route files.
 
-- [ ] **5.2 Implement lifecycle, read and health routes** `backend`
+- [x] **5.2 Implement lifecycle, read and health routes** `backend`
   - Red: add lifecycle/read/health response behavior to the same API seam before each handler is created.
   - `GET /api/bootstrap` runs catch-up then returns exactly `onboarding_required`, `resume_required`, `ready`, or `closed_until_boundary` plus current Month View when allowed.
   - `/api/onboarding` and `/api/resume` accept `{openingBalance,income}` only.
@@ -756,7 +756,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Startup catch-up is deliberately not an HTTP route; it is owned by the local systemd/database path in Gate 7.
   - **Audit:** API inventory exactly matches specification routes with no privileged internal HTTP hook; archived/unknown identity responses contain no financial values.
 
-- [ ] **5.3 Implement all month mutation routes and freeze Month View** `backend` `gate` `high`
+- [x] **5.3 Implement all month mutation routes and freeze Month View** `backend` `gate` `high`
   - Red: add the exact method/path/payload, success envelope, error code and revision conflict behavior for each route before implementing it.
   - Add exact method/path/payload pairs from specification section 11; `DELETE details` parses `expectedRevision` from query and no body.
   - Route params are validated before service calls. No route accepts owner/email or client-derived totals/state/actions.
@@ -764,14 +764,14 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Freeze `MonthView`, error codes, lifecycle states and route inventory at the end of this task; Gate 6 may not extend domain semantics from UI.
   - **Audit:** API suite plus generated endpoint-contract matrix from route exports versus spec proves no endpoint is missing, extra, or semantically overloaded; build/typecheck pass.
 
-- [ ] **5.4 Commit and push Gate 5 checkpoint** `gate` `verify`
+- [x] **5.4 Commit and push Gate 5 checkpoint** `gate` `verify`
   - Run API contract suite, every backend suite, lint/typecheck/build and staged route-inventory/secret checks.
   - Commit with `feat(api): expose Deledger JSON contracts`, then `git push origin online-mvp`.
   - **Audit:** pushed Month View/error contract matches the plan and Gate 6 introduces no backend contract extension without a plan revision.
 
 ## Gate 6 — Onboarding, current month and Filmstrip + Cover Flow UI
 
-- [ ] **6.1 Implement application shell, lifecycle routing and resilient client adapter** `frontend` `high`
+- [x] **6.1 Implement application shell, lifecycle routing and resilient client adapter** `frontend` `high`
   - Red: `theme-control.test.tsx` covers System/Light/Dark radio semantics, root attribute, exact cookie write/delete and system media changes; then `lifecycle-forms.test.tsx` covers lifecycle/form/focus behavior before reusable components are implemented.
   - Implement `theme-control.tsx` as an accessible menu in `app-shell.tsx`: current resolved mode has a sun/moon icon plus accessible label; menu options are “ตามระบบ”, “สว่าง”, “มืด”; selection updates `<html>` immediately and persists only the optional non-sensitive cookie contract.
   - When System is selected, listen to `matchMedia('(prefers-color-scheme: dark)')` only to update the displayed icon/label; CSS remains the visual authority. Remove the listener on unmount and never send theme to API/DB/logs.
@@ -782,7 +782,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Loading uses fixed-size neutral `surface-muted` skeletons; read error retains disabled last-rendered data with Retry; unknown/archived render no financial values.
   - **Audit:** inspect client bundle import graph to confirm no `src/server` module enters it; lifecycle URLs cannot render the wrong form/state after direct navigation.
 
-- [ ] **6.2 Implement `/month` against server-owned actions** `frontend` `high`
+- [x] **6.2 Implement `/month` against server-owned actions** `frontend` `high`
   - Red: `month-expenses.test.tsx` covers one chip/dialog/reorder/conflict behavior at a time through roles/text/user events; `user-journey.spec.ts` covers the integrated browser path with real API/database.
   - Header shows Reporting Month, Open/Closed, Draft/reconciliation and Partial state. Summary switches provisional Snapshot formula to final Monthly Spending only after explicit Ending Balance.
   - Timeline order: Income → Snapshot → detail chips → Ending Balance → Manual Close. Before final Bangkok day close is absent/disabled per `allowedActions`; after final-day Manual Close show “เดือนถัดไปจะเริ่มหลังเที่ยงคืน”.
@@ -793,7 +793,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - A 409 replaces view and displays “มีข้อมูลใหม่จากอีกหน้าจอ โหลดข้อมูลล่าสุดแล้ว”. Field errors sit beside input; domain errors sit by the action.
   - **Audit:** component + user-journey E2E suites pass, source comparison aligns with accepted Variant C structure and production color system in spec section 12, and every displayed amount comes from Month View/formatting only.
 
-- [ ] **6.3 Implement synchronized Filmstrip + Cover Flow `/history`** `frontend` `high`
+- [x] **6.3 Implement synchronized Filmstrip + Cover Flow `/history`** `frontend` `high`
   - Red: `history-explorer.test.tsx` drives synchronized selection, pagination identity and gap rendering; `history-correction.spec.ts` drives correction/dependent refresh through real browser/API/DB.
   - Filmstrip stays above Cover Flow, scrolls horizontally, shows every loaded Reporting Month/Tracking Gap and exposes state with text/symbol/pattern—not color alone.
   - Filmstrip click, Cover click, arrows, keyboard Left/Right and horizontal swipe update one selected index; selected item is centered and both controls remain synchronized.
@@ -803,7 +803,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Side covers expose only scan-level summary; use CSS 3D transforms with reduced-motion fallback to a horizontal snap carousel.
   - **Audit:** component/E2E suites represent all five states (Open, Reconciled, Needs Information, Inconsistent, Tracking Gap), empty/loading/read-failure and reduced-motion; selection identity remains MonthKey/gap ID after pagination.
 
-- [ ] **6.4 Freeze color, accessibility and responsive behavior** `frontend` `gate`
+- [x] **6.4 Freeze color, accessibility and responsive behavior** `frontend` `gate`
   - Red: `security-concurrency-accessibility.spec.ts` first exposes keyboard/focus/axe/responsive/conflict/theme-flash failures before each accessibility behavior is implemented.
   - Define only the exact Production Light/Dark custom properties. Base rules use tokens; `[data-theme='light']`/`[data-theme='dark']` force a mode and unqualified `@media (prefers-color-scheme: dark)` applies Dark tokens only when no override exists.
   - Use exact opaque `#B5C69C` only for actions, selected chips, current navigation and confirmed reconciliation, with `#262626` for every text/icon foreground on it. Do not define `primary-soft` or derive primary through opacity, tint/shade, `color-mix()`, filter, blend or gradient. Hover/pressed/focus retain the same fill and vary only neutral border/outline/shadow/geometry; disabled uses neutral tokens. Summary emphasis is neutral unless it uses the full exact primary/primary-ink pair. No raw blue/green/amber/red or second accent is allowed. Native inputs/dialogs declare the resolved `color-scheme`.
@@ -812,14 +812,14 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Mobile layout keeps Filmstrip above Cover, chip wrap usable and dialogs within viewport; desktop centers Cover without hiding correction controls.
   - **Audit:** component suites and Playwright Chromium/Firefox/WebKit/mobile projects pass acceptance scenario 20 across System/Light/Dark with axe, contrast and explicit keyboard assertions; computed styles prove primary backgrounds remain exactly `rgb(181, 198, 156)` and their text/icons exactly `rgb(38, 38, 38)` at default, hover, pressed, focus and selected states; reload shows no opposite-theme paint or hydration warning; lint/typecheck/build pass; source inspection finds no `primary-soft`, primary opacity/filter/blend/gradient/`color-mix()`, raw color outside approved token blocks or unnamed icon control.
 
-- [ ] **6.5 Commit and push Gate 6 checkpoint** `gate` `verify`
+- [x] **6.5 Commit and push Gate 6 checkpoint** `gate` `verify`
   - Run unit/component suites, all Playwright projects, coverage thresholds, backend regression suites, lint/typecheck/build and staged artifact checks.
   - Commit with `feat(ui): build monthly and history workflows`, then `git push origin online-mvp`.
   - **Audit:** no Playwright output/screenshot/video/coverage artifact is staged; remote HEAD matches local and UI commit contains its behavioral tests.
 
 ## Gate 7 — Docker, Cloudflare Private WARP and local deployment
 
-- [ ] **7.1 Compose the isolated runtime** `infra` `security` `high`
+- [x] **7.1 Compose the isolated runtime** `infra` `security` `high`
   - Red: `deployment.integration.test.ts` parses/render-checks production Compose for port/network/secret/runtime restrictions before Compose implementation.
   - `infra/compose.yaml` defines `postgres` on `data` only with no published ports; `web` on `edge` + `data` under alias `deledger.internal`; `cloudflared:2026.7.2` on `edge` only.
   - `web` runs non-root, read-only root filesystem, tmpfs for runtime temp, all capabilities dropped except `NET_BIND_SERVICE`, port 80 exposed only to Compose network. `cloudflared` alone receives Tunnel token. PostgreSQL uses named volume and secrets scoped by service.
@@ -832,21 +832,21 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Validate Access JWT reaches the origin after WARP enrollment and that direct host/LAN access has no listener.
   - **Audit:** two-user invite checklist confirms invited valid User succeeds, non-invited fails at Access, and archived mapped User fails again at database boundary despite token validity.
 
-- [ ] **7.3 Run idempotent startup and calendar catch-up** `infra` `high`
+- [x] **7.3 Run idempotent startup and calendar catch-up** `infra` `high`
   - Red: add disposable restart/catch-up behavior to deployment operations suite before systemd/Compose startup wiring.
   - PostgreSQL pg_cron schedules `catch_up_reporting_months` at 00:05 Bangkok.
   - Startup systemd unit waits for Compose health then executes global `catch_up_reporting_months()` locally through `docker compose exec postgres psql` as the container bootstrap/migration role; it uses container environment rather than putting a password in the unit command. The unit is not network-addressable, and its timer retries safely after host boot/outage.
   - Same catch-up runs before bootstrap, so missed cron/startup execution cannot make a stale month authoritative.
   - **Audit:** automated disposable deployment test stops/restarts twice across supplied business dates and confirms exact missing closed months plus one current Open Month with no duplicates.
 
-- [ ] **7.4 Commit and push Gate 7 checkpoint** `gate` `verify`
+- [x] **7.4 Commit and push Gate 7 checkpoint** `gate` `verify`
   - Run deployment operations suite, prior regression suites, Compose/image/security checks and staged secret/runtime checks.
   - Commit with `feat(infra): add private local deployment`, then `git push origin online-mvp`.
   - **Audit:** production Compose has no test override/loopback port merged into it and remote HEAD matches local.
 
 ## Gate 8 — Backup, restore and release readiness
 
-- [ ] **8.1 Implement encrypted off-device backup with safe retention** `infra` `security` `high`
+- [x] **8.1 Implement encrypted off-device backup with safe retention** `infra` `security` `high`
   - Red: `recovery.integration.test.ts` uses temporary mount fixtures and command boundary fakes to assert refusal/failure/atomic artifact behavior before backup script implementation.
   - `backup.sh` requires `BACKUP_TARGET=/mnt/deledger-backups` to be a mounted filesystem different from the database volume; refuse if absent.
   - At 03:15 Bangkok, stream `pg_dump --format=custom` through `age -r "$BACKUP_AGE_RECIPIENT"` to a same-directory temporary file, calculate SHA-256, verify non-empty encrypted output, then atomic rename.
@@ -854,7 +854,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - systemd service/timer use least-privilege environment file outside repo and persistent timers for missed schedules.
   - **Audit:** automated recovery suite proves failed mount/dump/encryption leaves previous backups untouched and performs no retention; captured logs contain filename/status only.
 
-- [ ] **8.2 Implement weekly isolated restore verification** `infra` `high`
+- [x] **8.2 Implement weekly isolated restore verification** `infra` `high`
   - Red: add newest-valid/corrupt-copy/isolation/cleanup behaviors to recovery integration suite before restore script implementation.
   - `restore-verify.sh` selects newest encrypted dump, verifies checksum, decrypts to a pipe/tempfs, restores into a uniquely named temporary PostgreSQL container/network/volume not connected to production.
   - Verify expected migration head, seven table presence, constraint/RLS status and per-table row counts against manifest; do not print row content or amounts.
@@ -869,7 +869,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Release state is `Ready` only when every required check passes; best-effort/no-SLA limitation is visible in operator runbook.
   - **Audit:** execute Test check + Build check verbatim from a clean dependency state and save only non-sensitive command results in the release checklist.
 
-- [ ] **8.4 Commit, push and open the Pull Request** `gate` `verify` `high`
+- [x] **8.4 Commit, push and open the Pull Request** `gate` `verify` `high`
   - Require every automated suite/coverage/build/recovery check Green; stage only Gate 8 paths and updated plan/checklist state.
   - Commit with `feat(ops): verify recovery and release readiness`, push `online-mvp`, confirm remote parity and run the exact `gh pr create` command in Git workflow.
   - Do not merge, tag, release or deploy; return PR URL and any remaining manual Cloudflare/WARP checklist items to User.
@@ -924,7 +924,7 @@ Executor updates only after commands/audits truly pass:
 | 7 | Private deployment + Green deployment suite | Passed (static/runtime checks); Cloudflare/WARP activation remains operator-run |
 | 8 | Recovery/release checks + final push and open PR | Implementation passed; host release check awaits mounted backup target and operator secrets |
 
-Gate 8 approved additions: `.github/workflows/ci.yml`, `docs/operations/backup-restore.md`, `docs/operations/operator-runbook.md`, `docs/operations/release-checklist.md`, `infra/backup/README.md`, `infra/backup/backup.sh`, `infra/backup/restore-verify.sh`, `infra/systemd/*`, `scripts/test-integration.mjs`, `scripts/test-operations.mjs`, `scripts/test-coverage.mjs`, `scripts/verify-release.sh`, and `web/tests/operations/recovery.integration.test.ts`.
+Gate 8 approved additions: `.github/workflows/ci.yml`, `docs/operations/backup-restore.md`, `docs/operations/operator-runbook.md`, `docs/operations/release-checklist.md`, `infra/backup/README.md`, `infra/backup/backup.sh`, `infra/backup/restore-verify.sh`, `infra/systemd/*`, `scripts/setup-private-beta.sh`, `scripts/test-integration.mjs`, `scripts/test-operations.mjs`, `scripts/test-coverage.mjs`, `scripts/verify-release.sh`, and `web/tests/operations/recovery.integration.test.ts`. The wizard is a human-in-the-loop activation aid; it cannot create Cloudflare credentials, mount storage, or hold the offline recovery key.
 
 ## Risk register
 

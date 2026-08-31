@@ -3,7 +3,7 @@
 - [ ] `pnpm install --frozen-lockfile`
 - [ ] `pnpm lint`, `pnpm typecheck`, `pnpm build`
 - [ ] `pnpm test:unit`, `pnpm test:integration`, `pnpm test:e2e`, `pnpm test:ops`, `pnpm test:coverage`
-- [ ] `docker build -f db/Dockerfile db` and `docker build -f web/Dockerfile .`
+- [ ] `docker build -f db/Dockerfile .` and `docker build -f web/Dockerfile .`
 - [ ] `docker compose -f infra/compose.yaml config --quiet` with operator environment
 - [ ] Migration head, forced RLS, role flags, and pg_cron schedule verified
 - [ ] Production Compose has no host-published ports and separates edge/data networks

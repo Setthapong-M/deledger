@@ -42,9 +42,17 @@ pnpm test:ops
 pnpm test:coverage
 pnpm test:all
 pnpm verify:release
+# First-host activation wizard (pauses for Cloudflare/WARP and secret custody)
+ENV_FILE=.env ./scripts/setup-private-beta.sh
 ```
 
 `test:integration`, `test:ops`, and `test:coverage` create and remove the disposable loopback PostgreSQL stack automatically. Browser tests use local fixtures and never call Cloudflare or production data.
+
+The private-beta wizard is intentionally operator-driven: it does not capture the
+offline age private key, does not make Cloudflare policy changes automatically,
+and stops before readiness when the off-device backup mount is absent. Run it only
+on the host that owns the production Docker stack, with `ENV_FILE` pointing to a
+mode-600 file outside version control.
 
 ## Project documents
 
