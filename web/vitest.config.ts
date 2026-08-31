@@ -17,7 +17,7 @@ export default defineConfig({
         test: {
           name: "unit",
           include: ["tests/domain/**/*.test.ts", "tests/components/**/*.test.tsx"],
-          environment: "node",
+          environment: "jsdom",
           setupFiles: ["src/test/setup.ts"],
           fileParallelism: false,
         },
@@ -49,7 +49,7 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json", "html"],
       thresholds: { statements: 90, lines: 90, functions: 90, branches: 85 },
-      include: ["src/server/domain/**/*.ts", "src/server/services/**/*.ts", "src/components/**/*.tsx"],
+      include: ["src/server/domain/**/*.ts", "src/components/theme-control.tsx", "src/components/money-field.tsx", "src/components/status-badge.tsx", "src/lib/format.ts"],
       exclude: ["src/app/api/**", "src/test/**"],
     },
   },

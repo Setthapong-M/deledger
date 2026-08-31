@@ -21,6 +21,29 @@ describe("deriveReconciliation", () => {
   it("detects details above coherent monthly spending", () => {
     expect(deriveReconciliation({ lifecycle: "closed", startingBalance: "20000.00", income: "30000.00", endingBalance: "35000.00", monthlySpending: "15000.00", detailTotal: "15000.01" })).toEqual({ state: "inconsistent", issueCodes: ["DETAILS_EXCEED_SPENDING"] });
   });
+
+  it("preserves a negative derived value for diagnostics without treating it as Money input", () => {
+    const projection: RawMonthProjection = {
+      monthStart: "2026-08-01", lifecycle: "closed", closedBy: "automatic", trackedFrom: "2026-08-01", revision: "2",
+      startingBalance: "20000.00", income: "0.00", endingBalance: "25000.00", latestSnapshot: null, monthlySpending: "-5000.00", provisionalSpending: null, detailTotal: "0.00", unitemizedSpending: "-5000.00", setup: [], isFinalDay: false, isArchived: false,
+    };
+    const view = toMonthView(projection, { editIncome: false, recordSnapshot: false, editEndingBalance: false, manageSetup: false, confirmDetails: false, manualClose: false });
+    expect(view.summary.monthlySpending).toBe("-5000.00");
+    expect(view.summary.unitemizedSpending).toBe("-5000.00");
+  });
+
+  it("maps an empty closed projection and a confirmed detail without inventing values", () => {
+    const projection: RawMonthProjection = {
+      monthStart: "2026-08-01", lifecycle: "closed", closedBy: "manual", trackedFrom: "2026-08-01", revision: "3",
+      startingBalance: null, income: null, endingBalance: null, latestSnapshot: null, monthlySpending: null, provisionalSpending: null, detailTotal: "0.00", unitemizedSpending: null,
+      setup: [{ id: "00000000-0000-4000-8000-000000000012", position: 1, name: "Internet", kind: "variable", fixedAmount: null, isPaused: true, detail: { confirmedName: "Internet", confirmedKind: "variable", confirmedAmount: "500.00", confirmedAt: "2026-08-20T00:00:00Z" } }], isFinalDay: true, isArchived: false,
+    };
+    const view = toMonthView(projection, { editIncome: true, recordSnapshot: false, editEndingBalance: true, manageSetup: false, confirmDetails: false, manualClose: false });
+    expect(view.reconciliation.state).toBe("needs_information");
+    expect(view.summary.latestSnapshot).toBeNull();
+    expect(view.setup[0]?.detail?.confirmedAmount).toBe("500.00");
+    expect(view.setup[0]?.isPaused).toBe(true);
+  });
 });
 
 describe("toMonthView", () => {

@@ -9,15 +9,15 @@ export default defineConfig({
   workers: 1,
   reporter: [["list"], ["html", { outputFolder: "playwright-report", open: "never" }]],
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL: "http://127.0.0.1:3014",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
     extraHTTPHeaders: { "x-deledger-test": "1" },
   },
   webServer: {
-    command: "pnpm --dir web dev --hostname 127.0.0.1 --port 3000",
-    url: "http://127.0.0.1:3000",
+    command: "pnpm dev --hostname 127.0.0.1 --port 3014",
+    url: "http://127.0.0.1:3014",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
