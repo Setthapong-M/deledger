@@ -1,0 +1,10 @@
+import { handleUserRoute, parseJson } from "@/server/http/route-handler";
+import { closeSchema, monthStart } from "@/server/http/schemas";
+import { manualClose } from "@/server/services/month-write";
+
+export async function POST(request: Request, { params }: { params: Promise<{ month: string }> }): Promise<Response> {
+  const { month } = await params;
+  let start: string;
+  try { start = monthStart(month); } catch { return Response.json({ error: { code: "INVALID_INPUT", message: "เดือนต้องเป็น YYYY-MM", field: "month", current: null } }, { status: 400 }); }
+  return handleUserRoute(request, { method: "POST", body: (value) => parseJson(value, closeSchema), operation: ({ client, ownerId, requestId }, body) => manualClose({ client, ownerId, requestId }, { monthStart: start, expectedRevision: body.expectedRevision }) });
+}

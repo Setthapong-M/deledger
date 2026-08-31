@@ -59,6 +59,35 @@ export async function editRecurringExpense(context: MutationContext, input: Revi
   return requiredView(context, input.monthStart);
 }
 
+export async function updateRecurringExpense(context: MutationContext, input: RevisionInput & { setupItemId: string; name?: string; kind?: SetupKind; fixedAmount?: string | null; isPaused?: boolean }): Promise<MonthView> {
+  const month = await lockMonth(context, input.monthStart, input.expectedRevision);
+  if (month.closed_at !== null) throw new DomainError("MONTH_NOT_OPEN", "แก้รายการประจำได้เฉพาะเดือนที่เปิดอยู่");
+  const item = await setupItem(context, input.monthStart, input.setupItemId);
+  const hasDefinitionChange = input.name !== undefined || input.kind !== undefined || input.fixedAmount !== undefined;
+  let name = item.name;
+  let kind = item.kind;
+  let fixedAmount = item.fixed_amount;
+  if (hasDefinitionChange) {
+    if (item.detail_exists) throw new DomainError("SETUP_ITEM_CONFIRMED", "รายการนี้ยืนยันแล้ว ต้องยกเลิกก่อนแก้ไข");
+    name = input.name ?? item.name;
+    kind = input.kind ?? item.kind;
+    fixedAmount = input.fixedAmount === undefined ? item.fixed_amount : input.fixedAmount;
+    const normalized = normalizeSetup(name, kind, fixedAmount);
+    name = normalized.name;
+    kind = normalized.kind;
+    fixedAmount = normalized.fixedAmount;
+  }
+  if (hasDefinitionChange) {
+    await context.client.query("UPDATE public.monthly_recurring_expense SET name = $4, kind = $5, fixed_amount = $6 WHERE owner_id = $1 AND month_start = $2 AND id = $3", [context.ownerId, input.monthStart, input.setupItemId, name, kind, fixedAmount]);
+  }
+  if (input.isPaused !== undefined) {
+    await context.client.query("UPDATE public.monthly_recurring_expense SET is_paused = $4 WHERE owner_id = $1 AND month_start = $2 AND id = $3", [context.ownerId, input.monthStart, input.setupItemId, input.isPaused]);
+  }
+  if (!hasDefinitionChange && input.isPaused === undefined) throw new DomainError("INVALID_INPUT", "ต้องส่งข้อมูลที่ต้องการแก้ไข");
+  await bumpRevision(context, input.monthStart);
+  return requiredView(context, input.monthStart);
+}
+
 export async function pauseRecurringExpense(context: MutationContext, input: RevisionInput & { setupItemId: string; paused: boolean }): Promise<MonthView> {
   const month = await lockMonth(context, input.monthStart, input.expectedRevision);
   if (month.closed_at !== null) throw new DomainError("MONTH_NOT_OPEN", "พักรายการได้เฉพาะเดือนที่เปิดอยู่");

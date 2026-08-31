@@ -1,12 +1,19 @@
 import type { PoolClient } from "pg";
 import type { MonthKey, MonthView } from "../domain/contracts";
+import { DomainError } from "../domain/errors";
 import { getMonthView, listMonthKeys } from "../repositories/months";
 
 export type HistoryMonth = { kind: "month"; id: MonthKey; view: MonthView };
 export type TrackingGap = { kind: "tracking_gap"; id: string; archivedAt: string; restoredAt: string | null };
 export type HistoryEntry = HistoryMonth | TrackingGap;
 
-export async function listHistory(client: PoolClient, ownerId: string, options: { before?: MonthKey; limit?: number } = {}): Promise<HistoryEntry[]> {
+export async function readMonth(client: PoolClient, ownerId: string, monthStart: string): Promise<MonthView> {
+  const view = await getMonthView(client, ownerId, monthStart);
+  if (!view) throw new DomainError("MONTH_NOT_FOUND", "ไม่พบเดือนนี้");
+  return view;
+}
+
+export async function listHistory(client: PoolClient, ownerId: string, options: { before?: string; limit?: number } = {}): Promise<HistoryEntry[]> {
   const limit = Math.max(1, Math.min(options.limit ?? 24, 24));
   const monthKeys = (await listMonthKeys(client, ownerId)).filter((key) => !options.before || key < options.before);
   const selected = monthKeys.slice(0, limit);
