@@ -53,6 +53,11 @@ services:
         aliases: [deledger.internal]
       data: {}
     expose: ["80"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:80/api/health/live').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
@@ -74,11 +79,32 @@ services:
     command: ["tunnel", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN is required}"]
     networks: [edge]
     depends_on:
-      web: {condition: service_started}
+      web: {condition: service_healthy}
     restart: unless-stopped
     logging:
       driver: json-file
       options: {max-size: "10m", max-file: "5"}
+
+  backup:
+    build:
+      context: ..
+      dockerfile: infra/backup/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres@postgres:5432/deledger
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      BACKUP_TARGET: /mnt/deledger-backups
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT is required}
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [data]
+    secrets:
+      - postgres_password
+    volumes:
+      - type: bind
+        source: /mnt/deledger-backups
+        target: /mnt/deledger-backups
+    user: "1001:1001"
+    profiles: [operations]
 
 networks:
   edge:

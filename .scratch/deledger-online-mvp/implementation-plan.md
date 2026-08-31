@@ -821,7 +821,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
 
 - [x] **7.1 Compose the isolated runtime** `infra` `security` `high`
   - Red: `deployment.integration.test.ts` parses/render-checks production Compose for port/network/secret/runtime restrictions before Compose implementation.
-  - `infra/compose.yaml` defines `postgres` on `data` only with no published ports; `web` on `edge` + `data` under alias `deledger.internal`; `cloudflared:2026.7.2` on `edge` only.
+  - `infra/compose.yaml` defines `postgres` on `data` only with no published ports; `web` on `edge` + `data` under alias `deledger.internal`; `cloudflared:2026.7.2` on `edge` only; and an explicitly invoked `backup` profile on `data` only.
   - `web` runs non-root, read-only root filesystem, tmpfs for runtime temp, all capabilities dropped except `NET_BIND_SERVICE`, port 80 exposed only to Compose network. `cloudflared` alone receives Tunnel token. PostgreSQL uses named volume and secrets scoped by service.
   - Health checks, `restart: unless-stopped`, log rotation and dependency health are explicit. Web receives neither Tunnel token nor backup private key; cloudflared receives no DB URL.
   - **Audit:** automated deployment suite plus `docker compose config` proves zero `ports:` entries, exact network membership/secret separation and non-root/capability/read-only settings.
@@ -856,8 +856,8 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
 
 - [x] **8.2 Implement weekly isolated restore verification** `infra` `high`
   - Red: add newest-valid/corrupt-copy/isolation/cleanup behaviors to recovery integration suite before restore script implementation.
-  - `restore-verify.sh` selects newest encrypted dump, verifies checksum, decrypts to a pipe/tempfs, restores into a uniquely named temporary PostgreSQL container/network/volume not connected to production.
-  - Verify expected migration head, seven table presence, constraint/RLS status and per-table row counts against manifest; do not print row content or amounts.
+  - `restore-verify.sh` selects newest checksum-valid encrypted dump, decrypts to a private temp file, restores into a uniquely named temporary PostgreSQL container/network/volume based on the production `pg_cron` image, not connected to production.
+  - Verify expected migration head, seven table presence, constraint/RLS status, `pg_cron`, and a row-count query for every expected table; do not print row content or amounts.
   - Destroy only resources bearing the generated verification label/name after exact validation; never target production Compose project/volume.
   - Weekly systemd timer records success time consumed by readiness; readiness is Not Ready if backup mount missing, no successful daily backup, or weekly verification overdue.
   - **Audit:** recovery suite restores newest test artifact and rejects corrupt copy without touching production-named resources or deleting last good backup.
@@ -924,7 +924,7 @@ Executor updates only after commands/audits truly pass:
 | 7 | Private deployment + Green deployment suite | Passed (static/runtime checks); Cloudflare/WARP activation remains operator-run |
 | 8 | Recovery/release checks + final push and open PR | Implementation passed; host release check awaits mounted backup target and operator secrets |
 
-Gate 8 approved additions: `.github/workflows/ci.yml`, `docs/operations/backup-restore.md`, `docs/operations/operator-runbook.md`, `docs/operations/release-checklist.md`, `infra/backup/README.md`, `infra/backup/backup.sh`, `infra/backup/restore-verify.sh`, `infra/systemd/*`, `scripts/setup-private-beta.sh`, `scripts/test-integration.mjs`, `scripts/test-operations.mjs`, `scripts/test-coverage.mjs`, `scripts/verify-release.sh`, and `web/tests/operations/recovery.integration.test.ts`. The wizard is a human-in-the-loop activation aid; it cannot create Cloudflare credentials, mount storage, or hold the offline recovery key.
+Gate 8 approved additions: `.github/workflows/ci.yml`, `docs/operations/backup-restore.md`, `docs/operations/operator-runbook.md`, `docs/operations/release-checklist.md`, `infra/backup/Dockerfile`, `infra/backup/README.md`, `infra/backup/backup.sh`, `infra/backup/restore-verify.sh`, `infra/compose.yaml` backup profile, `infra/systemd/*`, `scripts/setup-private-beta.sh`, `scripts/test-integration.mjs`, `scripts/test-operations.mjs`, `scripts/test-coverage.mjs`, `scripts/verify-release.sh`, and `web/tests/operations/recovery.integration.test.ts`. The wizard is a human-in-the-loop activation aid; it cannot create Cloudflare credentials, mount storage, or hold the offline recovery key.
 
 ## Risk register
 

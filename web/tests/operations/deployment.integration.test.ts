@@ -11,6 +11,12 @@ describe("private deployment boundary", () => {
     expect(compose).toContain("cap_drop: [ALL]");
     expect(compose).toContain("aliases: [deledger.internal]");
     expect(compose).toContain("CLOUDFLARE_TUNNEL_TOKEN");
+    expect(compose).toContain("/api/health/live");
+    expect(compose).toContain("condition: service_healthy");
+    expect(compose).toContain("backup:");
+    expect(compose).toContain("infra/backup/Dockerfile");
+    expect(compose).toContain("POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password");
+    expect(compose).toContain("profiles: [operations]");
   });
 
   it("documents exact private WARP and Access controls", async () => {

@@ -14,8 +14,17 @@ describe("backup and recovery safety", () => {
     const script = await readFile(new URL("../../../infra/backup/restore-verify.sh", import.meta.url), "utf8");
     expect(script).toContain("deledger-restore-verify-");
     expect(script).toContain("--network none");
+    expect(script).toContain('DELEDGER_DB_IMAGE:-deledger-postgres:latest');
+    expect(script).toContain("--exit-on-error");
     expect(script).toContain('docker rm -f "$label"');
     expect(script).toContain('docker volume rm "${label}-data"');
     expect(script).toContain("sha256sum --check");
+    expect(script).toContain("relforcerowsecurity");
+    expect(script).toContain("pg_extension");
+    expect(script).toContain("row-count check failed");
+    const backupDockerfile = await readFile(new URL("../../../infra/backup/Dockerfile", import.meta.url), "utf8");
+    expect(backupDockerfile).toContain("postgres:18.6-bookworm");
+    expect(backupDockerfile).toContain("apt-get install");
+    expect(backupDockerfile).toContain("age");
   });
 });

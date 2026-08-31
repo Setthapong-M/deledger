@@ -4,6 +4,10 @@ set -euo pipefail
 : "${BACKUP_TARGET:?BACKUP_TARGET is required}"
 : "${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT is required}"
 : "${DATABASE_URL:?DATABASE_URL is required}"
+if [[ -n "${POSTGRES_PASSWORD_FILE:-}" ]]; then
+  [[ -r "$POSTGRES_PASSWORD_FILE" ]] || { echo "POSTGRES_PASSWORD_FILE is not readable" >&2; exit 2; }
+  export PGPASSWORD="$(tr -d '\r\n' < "$POSTGRES_PASSWORD_FILE")"
+fi
 [[ "$BACKUP_TARGET" == "/mnt/deledger-backups" ]] || { echo "refusing unexpected backup target" >&2; exit 2; }
 mountpoint -q "$BACKUP_TARGET" || { echo "backup target is not a mounted filesystem" >&2; exit 2; }
 
