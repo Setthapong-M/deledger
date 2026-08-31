@@ -1,5 +1,8 @@
 import type { PoolClient } from "pg";
 import type { RawMonthProjection } from "../domain/month-view";
+import { toMonthView } from "../domain/month-view";
+import { deriveAllowedActions } from "../domain/allowed-actions";
+import type { MonthView } from "../domain/contracts";
 
 type MonthRow = {
   month_start: string;
@@ -83,7 +86,7 @@ const projectionQuery = `
     derived.detail_total::text,
     CASE WHEN derived.monthly_spending IS NULL THEN NULL ELSE (derived.monthly_spending - derived.detail_total)::text END AS unitemized_spending,
     public.current_business_date() = ((derived.month_start + interval '1 month')::date - 1) AS is_final_day,
-    EXISTS (SELECT 1 FROM public.user_archive_period AS archive WHERE archive.owner_id = derived.owner_id AND archive.restored_at IS NULL) AS is_archived,
+    false AS is_archived,
     setup.id::text AS setup_id,
     setup.position AS setup_position,
     setup.name AS setup_name,
@@ -147,8 +150,49 @@ export async function getMonthProjection(client: PoolClient, ownerId: string, mo
 
 export async function listMonthKeys(client: PoolClient, ownerId: string): Promise<string[]> {
   const result = await client.query<{ month_start: string }>(
-    "SELECT month_start::text FROM public.reporting_month WHERE owner_id = $1 ORDER BY month_start DESC",
+    "SELECT to_char(month_start, 'YYYY-MM') AS month_start FROM public.reporting_month WHERE owner_id = $1 ORDER BY month_start DESC",
     [ownerId],
   );
   return result.rows.map((row) => row.month_start);
+}
+
+export async function getMonthView(client: PoolClient, ownerId: string, monthStart: string): Promise<MonthView | null> {
+  const projection = await getMonthProjection(client, ownerId, monthStart);
+  if (!projection) return null;
+  const allowedActions = deriveAllowedActions({
+    lifecycle: projection.lifecycle,
+    hasStartingBalance: projection.startingBalance !== null,
+    hasIncome: projection.income !== null,
+    hasEndingBalance: projection.endingBalance !== null,
+    isFinalDay: projection.isFinalDay,
+    isArchived: projection.isArchived,
+  });
+  const affectedMonthKeys = await getAffectedMonthKeys(client, ownerId, monthStart);
+  return toMonthView({ ...projection, affectedMonthKeys }, allowedActions);
+}
+
+export async function getCurrentMonthStart(client: PoolClient, ownerId: string): Promise<string | null> {
+  const result = await client.query<{ month_start: string }>(
+    "SELECT month_start::text FROM public.reporting_month WHERE owner_id = $1 ORDER BY (closed_at IS NULL) DESC, month_start DESC LIMIT 1",
+    [ownerId],
+  );
+  return result.rows[0]?.month_start ?? null;
+}
+
+export async function getAffectedMonthKeys(client: PoolClient, ownerId: string, monthStart: string): Promise<string[]> {
+  const result = await client.query<{ month_start: string }>(
+    "SELECT month_start::text FROM public.reporting_month WHERE owner_id = $1 AND month_start = ($2::date + interval '1 month')::date",
+    [ownerId, monthStart],
+  );
+  return result.rows.map((row) => row.month_start.slice(0, 7));
+}
+
+export async function listMonthViews(client: PoolClient, ownerId: string): Promise<MonthView[]> {
+  const keys = await listMonthKeys(client, ownerId);
+  const views: MonthView[] = [];
+  for (const key of keys) {
+    const view = await getMonthView(client, ownerId, `${key}-01`);
+    if (view) views.push(view);
+  }
+  return views;
 }

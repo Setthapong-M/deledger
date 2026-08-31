@@ -4,7 +4,7 @@ Date: 2026-08-31
 Author: Codex
 Source repository: `Setthapong-M/deledger`
 Source branch: `main`
-Status: in progress — Gate 3
+Status: in progress — Gate 5
 Predecessors: `Online Deledger MVP — Executable Technical Specification`, `Wayfinder: Online Deledger MVP`, ADR 0001–0006
 
 > 🤖 **Execution method:** ใช้ sequential gated implementation + vertical-slice TDD ใน source repository นี้โดยตรง ทุก behavior ทำ Red → Green ทีละ test ผ่าน public seam และ commit เฉพาะสถานะ Green แต่ละ Gate ต้องผ่าน automated tests, Audit และ Build check ก่อน push checkpoint เพราะ schema → identity → domain operations → HTTP contracts → UI → deployment พึ่งพากันตามลำดับ ห้ามใช้ PARA workspace กับแผนนี้
@@ -703,7 +703,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
 
 ## Gate 4 — Atomic domain services and operator CLI
 
-- [ ] **4.1 Implement lifecycle and catch-up services** `backend` `high`
+- [x] **4.1 Implement lifecycle and catch-up services** `backend` `high`
   - Red: add onboarding/resume to `lifecycle.integration.test.ts` and catch-up/archive/gap literals to `catch-up-history.integration.test.ts` one scenario at a time before each implementation slice.
   - `lifecycle.ts`: onboarding requires active User with no Reporting Month and creates a supplied opening for PostgreSQL Bangkok today with explicit balance/Income; resume requires `resume_required_at`, creates supplied opening, copies latest setup once and clears the flag atomically.
   - `catch-up.ts` invokes the owner-scoped database catch-up function and maps its result; calendar mutation logic remains single-sourced in PostgreSQL so pg_cron, startup and bootstrap cannot drift. The database implementation locks User; closes every due Open Month; active/no-resume creates and closes missing months until current Open Month exists; active/resume-required creates none; archived closes only last due Open Month and creates none.
@@ -711,7 +711,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Manual Close never calls month creation on the last day.
   - **Audit:** automated service suites execute scenarios 8–15 in disposable DB, including two repeated/concurrent catch-up invocations yielding identical month rows.
 
-- [ ] **4.2 Implement all month mutations behind one service interface** `backend` `high`
+- [x] **4.2 Implement all month mutations behind one service interface** `backend` `high`
   - Red: `month-operations.integration.test.ts` adds each observable mutation, validation and stale-write behavior before production code; use a fake clock adapter only for final-day/non-final-day time boundary.
   - `month-write.ts` exports operations for Income, Ending Balance, Snapshot, add/edit/pause/reorder setup, confirm/correct/cancel detail, Manual Close and Closed Month correction.
   - Every operation uses lock order: User → Reporting Months ascending → setup → detail; compares locked revision before rules; increments target month revision exactly once.
@@ -722,7 +722,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Revision conflict throws `REVISION_CONFLICT` with freshly derived current Month View; never silently retries.
   - **Audit:** service suite validates scenarios 4–12 and 17 through exported operations and real database; source review confirms one transaction, deterministic locks, revision check and full Month View return.
 
-- [ ] **4.3 Implement operator lifecycle/export commands with no admin UI** `backend` `security`
+- [x] **4.3 Implement operator lifecycle/export commands with no admin UI** `backend` `security`
   - Red: add CLI observable behaviors to `web/tests/operations/operator.integration.test.ts` before each command path; use temporary directories and a disposable operator database, never production resources.
   - Root command shape remains exactly: `pnpm operator:user invite|archive|restore|transfer-email|export`.
   - `db.mjs` connects only with operator URL; `user.mjs` parses exact flags, normalizes email and invokes the fixed PostgreSQL operator functions directly. CLI ไม่ import TypeScript จาก `web` และไม่พึ่ง Next.js build output.
@@ -732,7 +732,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Export requires explicit output directory, writes owner rows plus derived summaries to temporary files, encrypts JSON/CSV before final rename, and removes plaintext in `finally`.
   - **Audit:** automated operations suite proves commands reject non-TTY destructive confirmation bypass, unknown flags and conflicting email; stdout/stderr contain no financial values.
 
-- [ ] **4.4 Commit and push Gate 4 checkpoint** `gate` `verify`
+- [x] **4.4 Commit and push Gate 4 checkpoint** `gate` `verify`
   - Run lifecycle/month/catch-up/history/CLI suites plus all earlier Gate suites, lint/typecheck/build and staged safety checks.
   - Commit with `feat(domain): implement monthly accounting operations`, then `git push origin online-mvp`.
   - **Audit:** test and implementation for every committed atomic operation are present together and remote HEAD matches local.
