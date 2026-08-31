@@ -13,5 +13,5 @@ ExecStart=/home/admin/vault/deledger/infra/backup/restore-verify.sh
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ProtectHome=true
+ProtectHome=read-only
 ReadWritePaths=/mnt/deledger-backups

@@ -752,7 +752,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - `GET /api/bootstrap` runs catch-up then returns exactly `onboarding_required`, `resume_required`, `ready`, or `closed_until_boundary` plus current Month View when allowed.
   - `/api/onboarding` and `/api/resume` accept `{openingBalance,income}` only.
   - Month list accepts `before=YYYY-MM`, `limit` default 24/max 24 and returns descending Reporting Month/Tracking Gap summaries; month/current/single return complete views.
-  - Liveness exposes process-only status without identity. Readiness remains protected and verifies database connection, migration head, pg_cron schedule and `/mnt/deledger-backups` mount state without disclosing values.
+  - Liveness exposes process-only status without identity. Readiness remains protected and verifies database connection, migration head, pg_cron schedule, mounted `/mnt/deledger-backups`, a fresh checksum-valid encrypted backup, and a fresh restore marker without disclosing values.
   - Startup catch-up is deliberately not an HTTP route; it is owned by the local systemd/database path in Gate 7.
   - **Audit:** API inventory exactly matches specification routes with no privileged internal HTTP hook; archived/unknown identity responses contain no financial values.
 
@@ -835,7 +835,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
 - [x] **7.3 Run idempotent startup and calendar catch-up** `infra` `high`
   - Red: add disposable restart/catch-up behavior to deployment operations suite before systemd/Compose startup wiring.
   - PostgreSQL pg_cron schedules `catch_up_reporting_months` at 00:05 Bangkok.
-  - Startup systemd unit waits for Compose health then executes global `catch_up_reporting_months()` locally through `docker compose exec postgres psql` as the container bootstrap/migration role; it uses container environment rather than putting a password in the unit command. The unit is not network-addressable, and its timer retries safely after host boot/outage.
+  - Startup systemd unit waits for Compose health, then invokes `infra/systemd/startup-catch-up.sh`, which executes global `catch_up_reporting_months()` locally through `docker compose exec postgres psql` as the container bootstrap/migration role and reads the password from the mounted Docker secret. The unit is not network-addressable, and its timer retries safely after host boot/outage.
   - Same catch-up runs before bootstrap, so missed cron/startup execution cannot make a stale month authoritative.
   - **Audit:** automated disposable deployment test stops/restarts twice across supplied business dates and confirms exact missing closed months plus one current Open Month with no duplicates.
 

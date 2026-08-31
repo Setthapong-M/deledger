@@ -239,7 +239,7 @@ pause "After PostgreSQL and web report healthy, press Enter."
 stage "Database: migrate and catch up"
 say "Use the migration owner connection only from the operator shell."
 step "Run pnpm db:migrate with the migration DATABASE_URL from your protected operator environment."
-step "Install the three systemd timers/units from infra/systemd and enable deledger-startup-catch-up.timer."
+step "Install the systemd units/timers from infra/systemd (including startup-catch-up.sh) and enable deledger-startup-catch-up.timer."
 step "Run the startup catch-up once, then verify the pg_cron job exists."
 pause "After migration and catch-up complete, press Enter."
 

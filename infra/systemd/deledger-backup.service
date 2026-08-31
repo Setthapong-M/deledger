@@ -15,5 +15,5 @@ ExecStart=/usr/bin/docker compose --profile operations -f /home/admin/vault/dele
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ProtectHome=true
+ProtectHome=read-only
 ReadWritePaths=/mnt/deledger-backups

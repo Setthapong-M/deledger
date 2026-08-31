@@ -1,12 +1,13 @@
 [Unit]
 Description=Deledger startup calendar catch-up
-After=docker.service deledger.service
+After=docker.service
 Requires=docker.service
 
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/deledger/runtime.env
-ExecStart=/usr/bin/docker compose -f /home/admin/vault/deledger/infra/compose.yaml exec -T postgres psql --username postgres --dbname deledger --command "SELECT public.catch_up_reporting_months();"
+ExecStartPre=/usr/bin/docker compose --env-file /etc/deledger/runtime.env -f /home/admin/vault/deledger/infra/compose.yaml up --wait --no-recreate postgres
+ExecStart=/home/admin/vault/deledger/infra/systemd/startup-catch-up.sh
 NoNewPrivileges=true
 ProtectSystem=strict
-ProtectHome=true
+ProtectHome=read-only
