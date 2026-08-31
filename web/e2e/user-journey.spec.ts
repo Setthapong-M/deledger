@@ -6,9 +6,15 @@ test("invited user can start a month and see the responsive ledger", async ({ pa
   await page.route("**/api/onboarding", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: view }) }));
   await page.route("**/api/months/current", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { state: "ready", month: view } }) }));
   await page.goto("/start");
-  await page.getByLabel("ยอดตั้งต้นที่รู้ตอนนี้").fill("20000");
-  await page.getByLabel("รายรับของเดือนนี้").fill("30000");
-  await page.getByRole("button", { name: "เริ่มเดือนแรก" }).click();
+  const openingBalance = page.getByLabel("ยอดตั้งต้นที่รู้ตอนนี้");
+  const income = page.getByLabel("รายรับของเดือนนี้");
+  await openingBalance.click();
+  await openingBalance.pressSequentially("20000");
+  await income.click();
+  await income.pressSequentially("30000");
+  const startButton = page.getByRole("button", { name: "เริ่มเดือนแรก" });
+  await expect(startButton).toBeEnabled();
+  await startButton.click();
   await expect(page).toHaveURL(/\/month$/);
   await expect(page.getByRole("heading", { name: "เดือนของคุณ" })).toBeVisible();
   await expect(page.getByRole("button", { name: /^ค่าเช่า 6000/ })).toBeVisible();
