@@ -838,6 +838,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
 - [x] **7.3 Run idempotent startup and calendar catch-up** `infra` `high`
   - Red: add disposable restart/catch-up behavior to deployment operations suite before systemd/Compose startup wiring.
   - PostgreSQL pg_cron schedules `catch_up_reporting_months` at 00:05 Bangkok.
+  - Production migrations run through an ephemeral `migrate` profile service on the private `data` network. It reads the admin password from a mounted secret and never publishes PostgreSQL on the host.
   - Startup systemd unit waits for Compose health, then invokes `infra/systemd/startup-catch-up.sh`, which executes global `catch_up_reporting_months()` locally through `docker compose exec postgres psql` as the container bootstrap/migration role and reads the password from the mounted Docker secret. The unit is not network-addressable, and its timer retries safely after host boot/outage.
   - Same catch-up runs before bootstrap, so missed cron/startup execution cannot make a stale month authoritative.
   - **Audit:** automated disposable deployment test stops/restarts twice across supplied business dates and confirms exact missing closed months plus one current Open Month with no duplicates.

@@ -231,8 +231,8 @@ step "Run: docker compose --env-file \"$ENV_FILE\" -f infra/compose.yaml up -d -
 pause "After PostgreSQL and web report healthy, press Enter."
 
 stage "Database: migrate and catch up"
-say "Use the migration owner connection only from the operator shell."
-step "Run pnpm db:migrate with the migration DATABASE_URL from your protected operator environment."
+say "The one-shot migration service reaches PostgreSQL only through the private data network and reads the admin password from its mounted secret."
+step "Run: docker compose --env-file \"$ENV_FILE\" --profile operations -f infra/compose.yaml run --rm --build migrate"
 step "Install and enable only deledger-startup-catch-up.timer from infra/systemd. Do not enable the backup or restore-verification timers."
 step "Run the startup catch-up once, then verify the pg_cron job exists."
 pause "After migration and catch-up complete, press Enter."
