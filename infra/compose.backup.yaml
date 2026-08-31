@@ -1,0 +1,9 @@
+services:
+  web:
+    environment:
+      BACKUP_TARGET: /mnt/deledger-backups
+    volumes:
+      - type: bind
+        source: /mnt/deledger-backups
+        target: /mnt/deledger-backups
+        read_only: true

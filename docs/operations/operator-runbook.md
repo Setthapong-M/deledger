@@ -4,6 +4,6 @@ Use `pnpm operator:user invite --email <address>` to create an invited identity,
 
 Archiving is a soft-delete lifecycle operation. It never removes financial rows. Restoration may require a fresh supplied opening and marks the gap in History when a calendar boundary was crossed.
 
-For an outage, check the PostgreSQL health state, the private Tunnel, and the backup mount. Run startup catch-up after the database is healthy. Do not expose a host port or bypass WARP to troubleshoot.
+For an outage, check the PostgreSQL health state and the private Tunnel. Run startup catch-up after the database is healthy. Do not expose a host port or bypass WARP to troubleshoot.
 
-The local host and Tunnel are best-effort and have no uptime SLA. Keep the age identity offline and perform a restore drill before changing the only database volume.
+The local host and Tunnel are best-effort and have no uptime SLA. `BACKUP_MODE=disabled` is the current temporary policy: there is no recovery path, and the backup/restore timers must remain disabled. Do not remove, replace, or recreate the only database volume unless permanent loss of all Deledger data is intended. When external storage becomes available, activate and verify the documented enforced backup mode before relying on recovery.

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { isBackupReady } from "../../src/server/services/readiness";
 
 describe("private deployment boundary", () => {
   it("keeps production services off host ports and separates edge/data access", async () => {
@@ -21,6 +22,8 @@ describe("private deployment boundary", () => {
     expect(compose).toContain("infra/backup/Dockerfile");
     expect(compose).toContain("POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password");
     expect(compose).toContain("profiles: [operations]");
+    expect(compose).toContain("BACKUP_MODE: ${BACKUP_MODE:?BACKUP_MODE is required}");
+    expect(compose.slice(compose.indexOf("  web:"), compose.indexOf("  cloudflared:"))).not.toContain("/mnt/deledger-backups");
     expect(compose).toContain("file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/postgres_password");
     expect(compose).not.toContain("external: true");
   });
@@ -32,20 +35,38 @@ describe("private deployment boundary", () => {
         await writeFile(join(secretDir, name), "test-only-placeholder\n", { mode: 0o640 });
       }
       const composeFile = fileURLToPath(new URL("../../../infra/compose.yaml", import.meta.url));
-      const result = spawnSync("docker", ["compose", "--profile", "operations", "-f", composeFile, "config", "--quiet"], {
+      const backupOverlay = fileURLToPath(new URL("../../../infra/compose.backup.yaml", import.meta.url));
+      const baseEnvironment = {
+        ...process.env,
+        DELEDGER_SECRET_DIR: secretDir,
+        DATABASE_URL: "postgresql://deledger_web:test-only@postgres:5432/deledger",
+        CLOUDFLARE_TEAM_DOMAIN: "https://team.cloudflareaccess.com",
+        CLOUDFLARE_ACCESS_AUD: "test-only",
+        CLOUDFLARE_TUNNEL_TOKEN: "test-only",
+      };
+      const result = spawnSync("docker", ["compose", "-f", composeFile, "config", "--quiet"], {
         cwd: fileURLToPath(new URL("../../../", import.meta.url)),
         encoding: "utf8",
         env: {
-          ...process.env,
-          DELEDGER_SECRET_DIR: secretDir,
-          DATABASE_URL: "postgresql://deledger_web:test-only@postgres:5432/deledger",
-          CLOUDFLARE_TEAM_DOMAIN: "https://team.cloudflareaccess.com",
-          CLOUDFLARE_ACCESS_AUD: "test-only",
-          CLOUDFLARE_TUNNEL_TOKEN: "test-only",
-          BACKUP_AGE_RECIPIENT: "age1testonly",
+          ...baseEnvironment,
+          BACKUP_MODE: "disabled",
         },
       });
       expect(result.status, result.stderr).toBe(0);
+      const enforcedResult = spawnSync(
+        "docker",
+        ["compose", "--profile", "operations", "-f", composeFile, "-f", backupOverlay, "config", "--quiet"],
+        {
+          cwd: fileURLToPath(new URL("../../../", import.meta.url)),
+          encoding: "utf8",
+          env: {
+            ...baseEnvironment,
+            BACKUP_MODE: "enforced",
+            BACKUP_AGE_RECIPIENT: "age1testonly",
+          },
+        },
+      );
+      expect(enforcedResult.status, enforcedResult.stderr).toBe(0);
     } finally {
       await rm(secretDir, { recursive: true, force: true });
     }
@@ -70,12 +91,21 @@ describe("private deployment boundary", () => {
     expect(runner).toContain("public.catch_up_reporting_months()");
   });
 
-  it("keeps readiness fail-closed on the mounted, checksum-valid backup target", async () => {
+  it("allows an explicit no-backup beta while keeping every other mode fail-closed", async () => {
     const readiness = await readFile(new URL("../../src/server/services/readiness.ts", import.meta.url), "utf8");
+    expect(isBackupReady("disabled", undefined)).toBe(true);
+    expect(isBackupReady(undefined, undefined)).toBe(false);
+    expect(isBackupReady("optional", undefined)).toBe(false);
     expect(readiness).toContain('const BACKUP_TARGET = "/mnt/deledger-backups"');
     expect(readiness).toContain('execFileSync("mountpoint", ["-q", target]');
     expect(readiness).toContain('execFileSync("sha256sum", ["--check", checksum]');
     expect(readiness).toContain("hasFreshRestoreMarker");
+  });
+
+  it("adds the backup mount only through the enforced-mode overlay", async () => {
+    const overlay = await readFile(new URL("../../../infra/compose.backup.yaml", import.meta.url), "utf8");
+    expect(overlay).toContain("source: /mnt/deledger-backups");
+    expect(overlay).toContain("read_only: true");
   });
 
   it("keeps systemd repo reads available under hardening", async () => {

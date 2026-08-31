@@ -27,6 +27,8 @@ describe("backup and recovery safety", () => {
     expect(backupDockerfile).toContain("apt-get install");
     expect(backupDockerfile).toContain("age");
     const releaseCheck = await readFile(new URL("../../../scripts/verify-release.sh", import.meta.url), "utf8");
-    expect(releaseCheck).toContain("for command in age docker mountpoint find sha256sum stat");
+    expect(releaseCheck).toContain('if [[ "$BACKUP_MODE" == "enforced" ]]');
+    expect(releaseCheck).toContain("for command in age mountpoint sha256sum");
+    expect(releaseCheck).toContain("BACKUP_MODE=disabled; database loss has no recovery path");
   });
 });

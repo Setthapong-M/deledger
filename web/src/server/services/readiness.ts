@@ -4,17 +4,24 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, statSync } from "node:fs";
 
 const BACKUP_TARGET = "/mnt/deledger-backups";
+const BACKUP_MODE_ENFORCED = "enforced";
+const BACKUP_MODE_DISABLED = "disabled";
 
 export async function readReadiness(client: PoolClient): Promise<{ status: "ready" }> {
   const database = await client.query<{ ok: number }>("SELECT 1 AS ok");
   const migration = await client.query<{ name: string }>("SELECT name FROM public.pgmigrations ORDER BY run_on DESC LIMIT 1");
   const cron = await client.query<{ count: string }>("SELECT count(*)::text AS count FROM cron.job WHERE jobname = 'deledger-catch-up'");
-  const backupTarget = process.env.BACKUP_TARGET;
-  const backupMounted = isMountedBackupTarget(backupTarget) && hasFreshBackup(backupTarget) && hasFreshRestoreMarker(backupTarget);
-  if (database.rows[0]?.ok !== 1 || !migration.rows[0] || cron.rows[0]?.count !== "1" || !backupMounted) {
+  const backupReady = isBackupReady(process.env.BACKUP_MODE, process.env.BACKUP_TARGET);
+  if (database.rows[0]?.ok !== 1 || !migration.rows[0] || cron.rows[0]?.count !== "1" || !backupReady) {
     throw new DomainError("SERVICE_UNAVAILABLE", "บริการยังไม่พร้อมใช้งาน");
   }
   return { status: "ready" };
+}
+
+export function isBackupReady(mode: string | undefined, target: string | undefined): boolean {
+  if (mode === BACKUP_MODE_DISABLED) return true;
+  if (mode !== BACKUP_MODE_ENFORCED) return false;
+  return isMountedBackupTarget(target) && hasFreshBackup(target) && hasFreshRestoreMarker(target);
 }
 
 function isMountedBackupTarget(target: string | undefined): boolean {

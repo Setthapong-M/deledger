@@ -185,35 +185,28 @@ finish() {
 # ──────────────────────────────────────────────────────────────────────────
 
 umask 077
-TOTAL_STAGES=8
+TOTAL_STAGES=6
 
 banner "Deledger Private Beta setup"
 
-stage "Host: off-device backup mount"
-say "The release gate requires a physically separate filesystem at /mnt/deledger-backups."
-step "Mount the backup device or remote filesystem at /mnt/deledger-backups."
-pause "After the mount is visible, press Enter to verify it."
-if ! mountpoint -q /mnt/deledger-backups; then
-  warn " /mnt/deledger-backups is not a mounted filesystem; no values were written."
-  exit 1
-fi
-say "Backup mount verified."
+stage "Data safety: backup disabled"
+warn "This beta has no backup or recovery path. Host, disk, volume, or operator failure can permanently lose all Deledger data."
+say "No backup directory will be created and no backup or restore timer should be enabled."
+write_env BACKUP_MODE "disabled"
+pause "Press Enter to accept this temporary private-beta policy."
 
 stage "Runtime: private values"
-say "Values are written with mode 600 to ENV_FILE (default: .env). The age identity is never captured here."
+say "Values are written with mode 600 to ENV_FILE (default: .env)."
 write_env APP_ORIGIN "http://deledger.internal"
 write_env BUSINESS_TIME_ZONE "Asia/Bangkok"
 ask_secret DATABASE_URL "PostgreSQL runtime URL (web role):"
 ask CLOUDFLARE_TEAM_DOMAIN "Cloudflare team domain (https://<team>.cloudflareaccess.com):"
 ask CLOUDFLARE_ACCESS_AUD "Access application audience:"
 ask_secret CLOUDFLARE_TUNNEL_TOKEN "Named Tunnel connector token:"
-ask BACKUP_AGE_RECIPIENT "age recipient (public key):"
 write_env DATABASE_URL "$DATABASE_URL"
 write_env CLOUDFLARE_TEAM_DOMAIN "$CLOUDFLARE_TEAM_DOMAIN"
 write_env CLOUDFLARE_ACCESS_AUD "$CLOUDFLARE_ACCESS_AUD"
 write_env CLOUDFLARE_TUNNEL_TOKEN "$CLOUDFLARE_TUNNEL_TOKEN"
-write_env BACKUP_AGE_RECIPIENT "$BACKUP_AGE_RECIPIENT"
-write_env BACKUP_TARGET "/mnt/deledger-backups"
 chmod 600 "$ENV_FILE"
 
 stage "Cloudflare: Tunnel and Access policy"
@@ -232,28 +225,17 @@ ask DELEDGER_SECRET_DIR "Directory for Compose secret files (default /etc/deledg
 DELEDGER_SECRET_DIR="${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}"
 write_env DELEDGER_SECRET_DIR "$DELEDGER_SECRET_DIR"
 step "Create postgres_password, web_password, maintenance_password, and operator_password in $DELEDGER_SECRET_DIR with owner/group-readable-only permissions (for example mode 0640)."
-step "Keep the migration/operator environment and age identity outside the repository; never paste the age identity into the backup mount."
+step "Keep the migration/operator environment outside the repository."
 step "Run: docker compose --env-file \"$ENV_FILE\" -f infra/compose.yaml config --quiet"
 step "Run: docker compose --env-file \"$ENV_FILE\" -f infra/compose.yaml up -d --build"
-step "Keep the built database image under the default tag deledger-postgres:latest, or record a reviewed equivalent as DELEDGER_DB_IMAGE in /etc/deledger/backup.env."
-step "Create the deledger-backup system user, grant only the Docker invocation permission required by the backup profile, and make /mnt/deledger-backups writable by UID 1001."
 pause "After PostgreSQL and web report healthy, press Enter."
 
 stage "Database: migrate and catch up"
 say "Use the migration owner connection only from the operator shell."
 step "Run pnpm db:migrate with the migration DATABASE_URL from your protected operator environment."
-step "Install the systemd units/timers from infra/systemd (including startup-catch-up.sh) and enable deledger-startup-catch-up.timer."
+step "Install and enable only deledger-startup-catch-up.timer from infra/systemd. Do not enable the backup or restore-verification timers."
 step "Run the startup catch-up once, then verify the pg_cron job exists."
 pause "After migration and catch-up complete, press Enter."
-
-stage "Recovery: daily backup and weekly restore"
-say "Readiness stays fail-closed until both checks have succeeded."
-step "Install the host age package; restore verification decrypts with the host age binary while the backup image carries its own age binary for encryption."
-step "Create /etc/deledger/backup.env with BACKUP_TARGET=/mnt/deledger-backups, BACKUP_AGE_RECIPIENT, DATABASE_URL, and the offline BACKUP_AGE_IDENTITY."
-step "Enable deledger-backup.timer and run deledger-backup.service once; it invokes the isolated Compose backup profile on the private data network."
-step "Enable deledger-restore-verify.timer and run deledger-restore-verify.service once."
-step "Confirm the target contains an encrypted dump, checksum, and .restore-verify.last-success; no plaintext dump or private key."
-pause "After the backup and isolated restore verification succeed, press Enter."
 
 stage "Invite: exact email and WARP smoke test"
 say "The application mapping and Cloudflare allow rule must use the same exact email."
@@ -267,7 +249,7 @@ stage "Readiness: final hand-off"
 say "The release check is intentionally strict and must be run with production values loaded."
 step "Load the runtime env into the operator shell, then run: COMPOSE_ENV_FILE=\"$ENV_FILE\" bash scripts/verify-release.sh"
 step "Open http://deledger.internal only while WARP is connected; verify /api/health/live and the authenticated application flow."
-step "Record the PR and the operator-managed Cloudflare/backup custody details without recording financial values."
+step "Record the PR, Cloudflare custody details, and the accepted no-backup risk without recording financial values."
 pause "Press Enter after the final readiness check."
 
 finish
