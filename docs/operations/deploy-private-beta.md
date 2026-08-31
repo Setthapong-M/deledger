@@ -5,7 +5,7 @@
 2. Create four file-backed Compose secrets for the PostgreSQL admin and three Deledger roles under `/etc/deledger/secrets` (or the `DELEDGER_SECRET_DIR` recorded in the runtime environment), with no world permissions. Keep values outside this repository.
 3. Copy the production environment values to the operator-managed environment file. Set `BACKUP_MODE=disabled`, the private Access team domain, audience, and Tunnel token; never put these in Git.
 4. Build and start PostgreSQL and the web image with `docker compose -f infra/compose.yaml up -d --build`.
-5. Run migrations from the operator shell with `DATABASE_URL` set to the migration connection, then install and run the startup catch-up service. It waits for the PostgreSQL health check and reads the admin password only from the container secret.
+5. Run `docker compose --env-file /etc/deledger/runtime.env --profile operations -f infra/compose.yaml run --rm --build migrate`, then install and run the startup catch-up service. Both stay on the private data network and read the admin password only from the container secret; PostgreSQL remains unpublished on the host.
 6. Install and enable only the startup-catch-up systemd timer. Do not install or enable the backup and restore-verification timers while backup mode is disabled.
 7. Complete `infra/cloudflare/access-policy-checklist.md`, enroll WARP clients, and test one invited account.
 8. Check `/api/health/live` through the private route and authenticated readiness. Run `scripts/verify-release.sh`; it must print the no-recovery warning and still validate production secrets, Cloudflare configuration, PostgreSQL, RLS, migrations, cron, images, tests, and network isolation.

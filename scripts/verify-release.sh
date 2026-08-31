@@ -101,9 +101,10 @@ pnpm test:all
 release_id="${DELEDGER_RELEASE_CHECK_ID:-$$}"
 db_image="deledger-release-db:${release_id}"
 web_image="deledger-release-web:${release_id}"
+migrate_image="deledger-release-migrate:${release_id}"
 backup_image=""
 cleanup_images() {
-  docker image rm "$web_image" "$db_image" >/dev/null 2>&1 || true
+  docker image rm "$migrate_image" "$web_image" "$db_image" >/dev/null 2>&1 || true
   if [[ -n "$backup_image" ]]; then
     docker image rm "$backup_image" >/dev/null 2>&1 || true
   fi
@@ -111,6 +112,7 @@ cleanup_images() {
 trap cleanup_images EXIT
 docker build --tag "$db_image" -f db/Dockerfile .
 docker build --tag "$web_image" -f web/Dockerfile .
+docker build --tag "$migrate_image" -f infra/migrate/Dockerfile .
 
 web_user="$(docker image inspect "$web_image" --format '{{.Config.User}}')"
 [[ "$web_user" == "deledger" || "$web_user" == "1001:1001" ]] || fail "web image must run as the non-root deledger user"
@@ -144,8 +146,21 @@ assert_clean_db_image() {
     fi
   ' || fail "database image contains a forbidden runtime artifact"
 }
+assert_clean_migrate_image() {
+  local image="$1"
+  docker run --rm --entrypoint sh "$image" -eu -c '
+    if find /app -type f \( \
+      -name ".env" -o -name ".env.*" -o -path "*/.scratch/*" -o -path "*/prototypes/*" \
+      -o -name "*.dump" -o -name "*.dump.age" -o -name "*.age" \
+      -o -name "*.key" -o -name "*.pem" -o -name "*.json.enc" \
+    \) -print -quit | grep -q .; then
+      exit 1
+    fi
+  ' || fail "migration image contains a forbidden runtime artifact"
+}
 assert_clean_web_image "$web_image"
 assert_clean_db_image "$db_image"
+assert_clean_migrate_image "$migrate_image"
 
 if [[ "$BACKUP_MODE" == "enforced" ]]; then
   backup_image="deledger-release-backup:${release_id}"

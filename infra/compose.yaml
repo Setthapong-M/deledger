@@ -23,6 +23,8 @@ services:
       - data
     volumes:
       - deledger_pgdata:/var/lib/postgresql
+    tmpfs:
+      - /run/deledger-secrets:rw,noexec,nosuid,size=1m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d deledger"]
       interval: 10s
@@ -80,6 +82,22 @@ services:
       driver: json-file
       options: {max-size: "10m", max-file: "5"}
 
+  migrate:
+    build:
+      context: ..
+      dockerfile: infra/migrate/Dockerfile
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [data]
+    secrets: [postgres_password]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    restart: "no"
+    profiles: [operations]
+
   backup:
     build:
       context: ..
@@ -110,7 +128,7 @@ networks:
 
 volumes:
   deledger_pgdata:
-    name: deledger_pgdata
+    name: ${DELEDGER_PGDATA_VOLUME:-deledger_pgdata}
 
 secrets:
   postgres_password:
