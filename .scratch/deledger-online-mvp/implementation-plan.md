@@ -675,20 +675,20 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
 
 ## Gate 3 — Cloudflare JWT verification and transaction-local identity
 
-- [ ] **3.1 Validate configuration once and fail closed** `backend` `security`
+- [x] **3.1 Validate configuration once and fail closed** `backend` `security`
   - Red: add production-vs-loopback-test configuration cases to `web/tests/auth/access.integration.test.ts`; invalid production origin/team domain must fail before any token/DB access.
   - `config.ts` is the only environment reader and validates exact `APP_ORIGIN=http://deledger.internal`, `BUSINESS_TIME_ZONE=Asia/Bangkok`, PostgreSQL URL and Cloudflare team-domain/audience formats with a closed Zod schema.
   - Client modules never import `config.ts`; no secret uses a `NEXT_PUBLIC_` prefix.
   - **Audit:** production build must fail on absent/invalid required config and logs must mention only variable names, never values.
 
-- [ ] **3.2 Verify Access JWT cryptographically** `backend` `security` `high`
+- [x] **3.2 Verify Access JWT cryptographically** `backend` `security` `high`
   - Red: create `web/src/test/jwks-server.ts` for the first auth test; it signs real RS256 tokens and the public verifier is exercised for one valid/failure behavior at a time. Only remote JWKS/time are controlled system boundaries.
   - `access-jwt.ts` reads only `Cf-Access-Jwt-Assertion`, accepts RS256, verifies JWKS signature, exact issuer `${CLOUDFLARE_TEAM_DOMAIN}`, application audience, `exp`, `nbf`, and Access token type.
   - Normalize email as `email.trim().toLowerCase()` after verification; reject missing/empty/non-string email.
   - Cache remote JWKS in memory; an unknown `kid` triggers one forced JWKS refresh and then rejection. Never decode without verify and never log token/claims/email.
   - **Audit:** auth integration suite covers missing header, malformed token, wrong issuer/audience, expired/not-before, unknown kid refresh and valid token; only valid verified identity reaches DB resolution.
 
-- [ ] **3.3 Bind verified identity to one database transaction** `backend` `security` `high`
+- [x] **3.3 Bind verified identity to one database transaction** `backend` `security` `high`
   - Red: use real Pool reuse in `web/tests/auth/access.integration.test.ts` to expose identity leakage/archival behavior before implementing the transaction wrapper.
   - `identity.ts` resolves exactly one current email mapping through the narrow function and distinguishes not-invited from archived without returning any financial row.
   - `withUserTransaction` follows: verify → lease → `BEGIN` → resolve mapping/archive → `set_config(..., true)` → callback → commit/rollback → release.
@@ -696,7 +696,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - `logging.ts` emits request ID, owner UUID, operation, latency, result code and month only; use an explicit allowlist of log fields.
   - **Audit:** automated auth suite forces callback error and pool reuse, confirms `current_setting('deledger.user_id', true)` empty on the next lease, and proves archived identity fails while JWT remains valid.
 
-- [ ] **3.4 Commit and push Gate 3 checkpoint** `gate` `verify`
+- [x] **3.4 Commit and push Gate 3 checkpoint** `gate` `verify`
   - Run access/identity integration suite, existing database suites, lint/typecheck/build and staged secret/log-field checks.
   - Commit with `feat(auth): bind Cloudflare identity to database sessions`, then `git push origin online-mvp`.
   - **Audit:** the pushed checkpoint contains no test signing key outside ignored runtime temp and HEAD equals remote.
