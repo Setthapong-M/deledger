@@ -1,0 +1,30 @@
+name: deledger_test
+
+services:
+  postgres-test:
+    build:
+      context: ..
+      dockerfile: db/Dockerfile
+    environment:
+      POSTGRES_DB: deledger_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test-only-placeholder
+    ports:
+      - "127.0.0.1:55432:5432"
+    networks:
+      - data-test
+    volumes:
+      - deledger_test_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d deledger_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+networks:
+  data-test:
+    name: deledger_test_data
+
+volumes:
+  deledger_test_pgdata:
+    name: deledger_test_pgdata
