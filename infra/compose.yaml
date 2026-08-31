@@ -1,0 +1,102 @@
+name: deledger
+
+services:
+  postgres:
+    build:
+      context: ..
+      dockerfile: db/Dockerfile
+    environment:
+      POSTGRES_DB: deledger
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
+      DELEDGER_WEB_PASSWORD_FILE: /run/secrets/web_password
+      DELEDGER_MAINTENANCE_PASSWORD_FILE: /run/secrets/maintenance_password
+      DELEDGER_OPERATOR_PASSWORD_FILE: /run/secrets/operator_password
+    secrets:
+      - postgres_password
+      - web_password
+      - maintenance_password
+      - operator_password
+    networks:
+      - data
+    volumes:
+      - deledger_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d deledger"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
+
+  web:
+    build:
+      context: ..
+      dockerfile: web/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: "80"
+      APP_ORIGIN: http://deledger.internal
+      BUSINESS_TIME_ZONE: Asia/Bangkok
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      CLOUDFLARE_TEAM_DOMAIN: ${CLOUDFLARE_TEAM_DOMAIN:?CLOUDFLARE_TEAM_DOMAIN is required}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:?CLOUDFLARE_ACCESS_AUD is required}
+      BACKUP_TARGET: /mnt/deledger-backups
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks:
+      edge:
+        aliases: [deledger.internal]
+      data: {}
+    expose: ["80"]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    user: "1001:1001"
+    volumes:
+      - type: bind
+        source: /mnt/deledger-backups
+        target: /mnt/deledger-backups
+        read_only: true
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.7.2
+    command: ["tunnel", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN is required}"]
+    networks: [edge]
+    depends_on:
+      web: {condition: service_started}
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
+
+networks:
+  edge:
+    name: deledger_edge
+  data:
+    name: deledger_data
+    internal: true
+
+volumes:
+  deledger_pgdata:
+    name: deledger_pgdata
+
+secrets:
+  postgres_password:
+    external: true
+  web_password:
+    external: true
+  maintenance_password:
+    external: true
+  operator_password:
+    external: true

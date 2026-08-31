@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Deledger encrypted backup
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 Asia/Bangkok
+Persistent=true
+Unit=deledger-backup.service
+
+[Install]
+WantedBy=timers.target

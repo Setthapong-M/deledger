@@ -3,10 +3,24 @@ set -euo pipefail
 
 database_name="${POSTGRES_DB:-deledger}"
 admin_user="${POSTGRES_USER:-postgres}"
-admin_password="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
-web_password="${DELEDGER_WEB_PASSWORD:?DELEDGER_WEB_PASSWORD is required}"
-maintenance_password="${DELEDGER_MAINTENANCE_PASSWORD:?DELEDGER_MAINTENANCE_PASSWORD is required}"
-operator_password="${DELEDGER_OPERATOR_PASSWORD:?DELEDGER_OPERATOR_PASSWORD is required}"
+
+read_secret() {
+  local variable="$1"
+  local file_variable="${variable}_FILE"
+  local file_path="${!file_variable:-}"
+  if [[ -n "$file_path" ]]; then
+    [[ -r "$file_path" ]] || { echo "$file_variable is not readable" >&2; exit 1; }
+    tr -d '\r\n' < "$file_path"
+  else
+    [[ -n "${!variable:-}" ]] || { echo "$variable is required" >&2; exit 1; }
+    printf '%s' "${!variable}"
+  fi
+}
+
+admin_password="$(read_secret POSTGRES_PASSWORD)"
+web_password="$(read_secret DELEDGER_WEB_PASSWORD)"
+maintenance_password="$(read_secret DELEDGER_MAINTENANCE_PASSWORD)"
+operator_password="$(read_secret DELEDGER_OPERATOR_PASSWORD)"
 
 export PGPASSWORD="$admin_password"
 psql --username "$admin_user" --dbname "$database_name" --set ON_ERROR_STOP=1 \

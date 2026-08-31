@@ -1,0 +1,15 @@
+[Unit]
+Description=Deledger isolated restore verification
+After=deledger-backup.service
+
+[Service]
+Type=oneshot
+User=deledger-backup
+Group=deledger-backup
+EnvironmentFile=/etc/deledger/backup.env
+ExecStart=/home/admin/vault/deledger/infra/backup/restore-verify.sh
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/mnt/deledger-backups
