@@ -14,12 +14,13 @@ require_command() {
 : "${CLOUDFLARE_TEAM_DOMAIN:?CLOUDFLARE_TEAM_DOMAIN is required}"
 : "${CLOUDFLARE_ACCESS_AUD:?CLOUDFLARE_ACCESS_AUD is required}"
 : "${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN is required}"
-: "${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT is required}"
-export DATABASE_URL CLOUDFLARE_TEAM_DOMAIN CLOUDFLARE_ACCESS_AUD CLOUDFLARE_TUNNEL_TOKEN BACKUP_AGE_RECIPIENT
+: "${BACKUP_MODE:?BACKUP_MODE is required (disabled or enforced)}"
+[[ "$BACKUP_MODE" == "disabled" || "$BACKUP_MODE" == "enforced" ]] || fail "BACKUP_MODE must be disabled or enforced"
+export DATABASE_URL CLOUDFLARE_TEAM_DOMAIN CLOUDFLARE_ACCESS_AUD CLOUDFLARE_TUNNEL_TOKEN BACKUP_MODE
 
 [[ "$(node --version)" == "v22.23.1" ]] || fail "Node 22.23.1 required"
 [[ "$(pnpm --version)" == "11.1.3" ]] || fail "pnpm 11.1.3 required"
-for command in age docker mountpoint find sha256sum stat; do require_command "$command"; done
+for command in docker find stat; do require_command "$command"; done
 
 secret_dir="${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}"
 [[ -d "$secret_dir" ]] || fail "Compose secret directory is required: $secret_dir"
@@ -30,26 +31,33 @@ for secret_name in postgres_password web_password maintenance_password operator_
   [[ "$secret_mode" =~ 0$ ]] || fail "Compose secret must not be world-readable: $secret_path"
 done
 
-backup_target=/mnt/deledger-backups
-[[ -d "$backup_target" ]] && mountpoint -q "$backup_target" || fail "backup mount is required"
-backup_artifact="$(find "$backup_target" -maxdepth 1 -type f -name 'deledger-*.dump.age' -printf '%T@ %p\n' | sort -nr | awk 'NR == 1 {print $2}')"
-[[ -n "$backup_artifact" && -f "$backup_artifact.sha256" ]] || fail "encrypted backup and checksum are required"
-if ! (cd "$backup_target" && sha256sum --check "$(basename "$backup_artifact.sha256")" >/dev/null); then
-  fail "newest encrypted backup checksum is invalid"
-fi
-[[ -n "$(find "$backup_target" -maxdepth 1 -type f -name 'deledger-*.dump.age' -mmin -1560 -print -quit)" ]] || fail "encrypted backup is older than 26 hours"
-[[ -n "$(find "$backup_target" -maxdepth 1 -type f -name '.restore-verify.last-success' -mmin -11520 -print -quit)" ]] || fail "weekly restore marker is older than 8 days"
-if [[ -n "$(find "$backup_target" -maxdepth 1 -type f \( -name '*.dump' -o -name '*.sql' -o -name '*.json' -o -name '*.key' -o -name '*.pem' -o -name '*identity*' \) -print -quit)" ]]; then
-  fail "backup target contains a plaintext/export/key artifact"
-fi
-
 compose=(docker compose)
 if [[ -n "${COMPOSE_ENV_FILE:-}" ]]; then
   [[ -r "$COMPOSE_ENV_FILE" ]] || fail "COMPOSE_ENV_FILE is not readable: $COMPOSE_ENV_FILE"
   compose+=(--env-file "$COMPOSE_ENV_FILE")
 fi
-compose+=(--profile operations)
 compose+=(-f infra/compose.yaml)
+
+if [[ "$BACKUP_MODE" == "enforced" ]]; then
+  : "${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT is required when BACKUP_MODE=enforced}"
+  export BACKUP_AGE_RECIPIENT
+  for command in age mountpoint sha256sum; do require_command "$command"; done
+  backup_target=/mnt/deledger-backups
+  [[ -d "$backup_target" ]] && mountpoint -q "$backup_target" || fail "backup mount is required"
+  backup_artifact="$(find "$backup_target" -maxdepth 1 -type f -name 'deledger-*.dump.age' -printf '%T@ %p\n' | sort -nr | awk 'NR == 1 {print $2}')"
+  [[ -n "$backup_artifact" && -f "$backup_artifact.sha256" ]] || fail "encrypted backup and checksum are required"
+  if ! (cd "$backup_target" && sha256sum --check "$(basename "$backup_artifact.sha256")" >/dev/null); then
+    fail "newest encrypted backup checksum is invalid"
+  fi
+  [[ -n "$(find "$backup_target" -maxdepth 1 -type f -name 'deledger-*.dump.age' -mmin -1560 -print -quit)" ]] || fail "encrypted backup is older than 26 hours"
+  [[ -n "$(find "$backup_target" -maxdepth 1 -type f -name '.restore-verify.last-success' -mmin -11520 -print -quit)" ]] || fail "weekly restore marker is older than 8 days"
+  if [[ -n "$(find "$backup_target" -maxdepth 1 -type f \( -name '*.dump' -o -name '*.sql' -o -name '*.json' -o -name '*.key' -o -name '*.pem' -o -name '*identity*' \) -print -quit)" ]]; then
+    fail "backup target contains a plaintext/export/key artifact"
+  fi
+  compose+=(--profile operations -f infra/compose.backup.yaml)
+else
+  printf 'release warning: BACKUP_MODE=disabled; database loss has no recovery path\n' >&2
+fi
 
 "${compose[@]}" config --quiet || fail "production Compose config is invalid"
 compose_config="$("${compose[@]}" config)"
@@ -93,14 +101,16 @@ pnpm test:all
 release_id="${DELEDGER_RELEASE_CHECK_ID:-$$}"
 db_image="deledger-release-db:${release_id}"
 web_image="deledger-release-web:${release_id}"
-backup_image="deledger-release-backup:${release_id}"
+backup_image=""
 cleanup_images() {
-  docker image rm "$backup_image" "$web_image" "$db_image" >/dev/null 2>&1 || true
+  docker image rm "$web_image" "$db_image" >/dev/null 2>&1 || true
+  if [[ -n "$backup_image" ]]; then
+    docker image rm "$backup_image" >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup_images EXIT
 docker build --tag "$db_image" -f db/Dockerfile .
 docker build --tag "$web_image" -f web/Dockerfile .
-docker build --tag "$backup_image" -f infra/backup/Dockerfile .
 
 web_user="$(docker image inspect "$web_image" --format '{{.Config.User}}')"
 [[ "$web_user" == "deledger" || "$web_user" == "1001:1001" ]] || fail "web image must run as the non-root deledger user"
@@ -134,9 +144,13 @@ assert_clean_db_image() {
     fi
   ' || fail "database image contains a forbidden runtime artifact"
 }
-assert_clean_backup_image() {
-  local image="$1"
-  docker run --rm --entrypoint sh "$image" -eu -c '
+assert_clean_web_image "$web_image"
+assert_clean_db_image "$db_image"
+
+if [[ "$BACKUP_MODE" == "enforced" ]]; then
+  backup_image="deledger-release-backup:${release_id}"
+  docker build --tag "$backup_image" -f infra/backup/Dockerfile .
+  docker run --rm --entrypoint sh "$backup_image" -eu -c '
     if find /usr/local/bin -type f \( \
       -name ".env" -o -name ".env.*" -o -path "*/.scratch/*" -o -path "*/prototypes/*" \
       -o -name "*.dump" -o -name "*.dump.age" -o -name "*.age" \
@@ -145,9 +159,6 @@ assert_clean_backup_image() {
       exit 1
     fi
   ' || fail "backup image contains a forbidden runtime artifact"
-}
-assert_clean_web_image "$web_image"
-assert_clean_db_image "$db_image"
-assert_clean_backup_image "$backup_image"
+fi
 
 printf 'release checks passed\n'

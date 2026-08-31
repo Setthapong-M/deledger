@@ -4,7 +4,7 @@ Date: 2026-08-31
 Author: Codex
 Source repository: `Setthapong-M/deledger`
 Source branch: `online-mvp`
-Status: implementation complete — Gate 8; host activation pending operator-managed backup/Cloudflare secrets
+Status: implementation complete — private-beta activation pending operator-managed secrets and Cloudflare; backup explicitly deferred
 Predecessors: `Online Deledger MVP — Executable Technical Specification`, `Wayfinder: Online Deledger MVP`, ADR 0001–0006
 
 > 🤖 **Execution method:** ใช้ sequential gated implementation + vertical-slice TDD ใน source repository นี้โดยตรง ทุก behavior ทำ Red → Green ทีละ test ผ่าน public seam และ commit เฉพาะสถานะ Green แต่ละ Gate ต้องผ่าน automated tests, Audit และ Build check ก่อน push checkpoint เพราะ schema → identity → domain operations → HTTP contracts → UI → deployment พึ่งพากันตามลำดับ ห้ามใช้ PARA workspace กับแผนนี้
@@ -14,6 +14,8 @@ Predecessors: `Online Deledger MVP — Executable Technical Specification`, `Way
 สร้าง Deledger Private Beta เป็น responsive Next.js web application ที่ช่วยให้ User คำนวณ Income และ Monthly Spending จาก Financial Boundary เดียว โดยไม่ต้องจด Transaction Detail ทุกครั้ง ใช้ PostgreSQL แบบ local, เข้าผ่าน Cloudflare Private WARP/Access เท่านั้น และแยกข้อมูลของ User ทุกคนด้วย transaction-local identity กับ forced RLS
 
 ผลลัพธ์เมื่อจบแผนต้องรองรับ onboarding/resume, Balance Snapshot, explicit Ending Balance, Monthly Expense Setup แบบ month-owned, Fixed/Variable confirmation chips, Manual/Automatic Close, Closed Month correction, Tracking Gap, Filmstrip + Cover Flow history, operator lifecycle commands, private deployment และ encrypted off-device backup/restore verification พร้อม automated unit/integration/component/E2E/operations tests และ traceable Git history บน branch `online-mvp`
+
+> **Temporary release policy (2026-08-31):** User เคาะให้ Private Beta ใช้ `BACKUP_MODE=disabled` เพราะยังไม่มี external storage และห้ามสร้าง temporary/local backup ทดแทน ความสามารถ encrypted backup/restore ยังอยู่ใน source สำหรับเปิดภายหลัง แต่รอบ deploy นี้จะไม่ mount backup target, ไม่รัน backup service/timer และยอมรับว่าความเสียหายของ host disk หรือ PostgreSQL volume ทำให้ข้อมูลสูญหายถาวร
 
 ### ที่มา
 
@@ -78,6 +80,7 @@ Wayfinder และ executable specification เคาะ business/architecture 
 | Expense model | Setup เป็นของแต่ละ Reporting Month และ copy จากเดือนก่อนหนึ่งครั้ง |
 | History UI | ใช้โครง Variant C: synchronized top Filmstrip + Cover Flow โดย centered Cover มีรายละเอียด minimal ครบ และใช้สีใน Private Beta |
 | Private Beta color/theme | ใช้ Neutral Ledger ทั้ง Light/Dark: ขาว ดำ เทาเป็นฐาน และ exact opaque `#B5C69C` เป็น chromatic accent เดียวโดยห้ามทำให้อ่อน/เข้ม/โปร่ง/ผสมสี; พื้น accent ใช้ text/icon `#262626`; ครั้งแรกตาม system และให้เลือก “ตามระบบ / สว่าง / มืด”; สถานะใช้ข้อความ ไอคอน เส้นขอบ และ pattern ไม่ใช้หลายสีแยกประเภท |
+| Temporary backup policy | ใช้ `BACKUP_MODE=disabled` จนกว่าจะมี external storage; ห้าม temporary/local backup และยอมรับ no-recovery risk |
 | Automated tests | รวม unit, PostgreSQL integration, auth, service, API contract, component, Playwright E2E, accessibility และ operations/recovery tests |
 | Source Git actions | ใช้ branch `online-mvp`, passing Gate commits, push checkpoint ทุก Gate, GitHub Actions CI สำหรับ disposable checks และเปิด Pull Request หลัง Gate 8; ไม่ merge/tag/force-push/deploy อัตโนมัติ |
 
@@ -868,6 +871,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Verify production image contains no `.env`, `.scratch`, prototypes, source maps with secrets, plaintext export or backup key.
   - Release state is `Ready` only when every required check passes; best-effort/no-SLA limitation is visible in operator runbook.
   - **Audit:** execute Test check + Build check verbatim from a clean dependency state and save only non-sensitive command results in the release checklist.
+  - Temporary private-beta override: `BACKUP_MODE=disabled` skips only host `age`, mount, artifact and restore-marker checks, emits a no-recovery warning, and leaves every non-backup release check fail-closed. Enforced mode retains the original requirements through `infra/compose.backup.yaml`.
 
 - [x] **8.4 Commit, push and open the Pull Request** `gate` `verify` `high`
   - Require every automated suite/coverage/build/recovery check Green; stage only Gate 8 paths and updated plan/checklist state.
@@ -907,7 +911,7 @@ pnpm db:migrate -- --check-order
 bash scripts/verify-release.sh
 ```
 
-Expected result: every command exits 0; migrations are at exact head; no host port exists; readiness fails closed until off-device backup mount and verified restore marker exist
+Expected result: every command exits 0; migrations are at exact head; no host port exists; readiness accepts only explicit `BACKUP_MODE=disabled`, while absent/invalid mode fails closed and `enforced` still requires the off-device mount plus verified restore marker
 
 ## Gate completion record
 
@@ -922,7 +926,7 @@ Executor updates only after commands/audits truly pass:
 | 5 | Frozen JSON API/Month View + Green contract suite | Passed |
 | 6 | Responsive Neutral Ledger User flows/history + Green component/E2E/accessibility suites | Passed locally (Chromium/Firefox); WebKit OS dependencies covered by CI |
 | 7 | Private deployment + Green deployment suite | Passed (static/runtime checks); Cloudflare/WARP activation remains operator-run |
-| 8 | Recovery/release checks + final push and open PR | Implementation passed; host release check awaits mounted backup target and operator secrets |
+| 8 | Recovery/release checks + final push and open PR | Backup capability passed; host beta uses explicit no-backup override and awaits operator secrets/Cloudflare |
 
 Gate 8 approved additions: `.github/workflows/ci.yml`, `docs/operations/backup-restore.md`, `docs/operations/operator-runbook.md`, `docs/operations/release-checklist.md`, `infra/backup/Dockerfile`, `infra/backup/README.md`, `infra/backup/backup.sh`, `infra/backup/restore-verify.sh`, `infra/compose.yaml` backup profile, `infra/systemd/*`, `scripts/setup-private-beta.sh`, `scripts/test-integration.mjs`, `scripts/test-operations.mjs`, `scripts/test-coverage.mjs`, `scripts/verify-release.sh`, and `web/tests/operations/recovery.integration.test.ts`. The wizard is a human-in-the-loop activation aid; it cannot create Cloudflare credentials, mount storage, or hold the offline recovery key.
 
@@ -942,6 +946,7 @@ Gate 8 approved additions: `.github/workflows/ci.yml`, `docs/operations/backup-r
 | JavaScript floating-point corrupts money | Decimal string at boundary, numeric SQL arithmetic, source audit against numeric coercion |
 | Private host becomes reachable on LAN/public network | No host ports; WARP private route only; Compose/network inspection in release check |
 | Local machine/storage failure loses financial data | Daily encrypted physically off-device backup, 30-day retention and weekly isolated restore |
+| Private beta runs before external backup storage exists | Explicit `BACKUP_MODE=disabled` warning and no fake temporary target; User accepts that host/disk/volume failure permanently loses data until enforced backup is activated |
 | Backup cleanup deletes the last recoverable copy | Retention executes only after new encrypted dump and checksum succeed |
 | Accent shifts optically between components/states or its foreground loses contrast | One immutable opaque `#B5C69C` token, fixed `#262626` foreground at 8.30:1, no derived primary variants, and computed-style assertions across interaction states |
 | Theme flashes or hydrates differently from server | Server renders cookie override, CSS resolves System before paint, client uses the same initial value and no inline bootstrap script |

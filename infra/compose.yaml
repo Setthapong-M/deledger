@@ -45,7 +45,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
       CLOUDFLARE_TEAM_DOMAIN: ${CLOUDFLARE_TEAM_DOMAIN:?CLOUDFLARE_TEAM_DOMAIN is required}
       CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:?CLOUDFLARE_ACCESS_AUD is required}
-      BACKUP_TARGET: /mnt/deledger-backups
+      BACKUP_MODE: ${BACKUP_MODE:?BACKUP_MODE is required}
     depends_on:
       postgres: {condition: service_healthy}
     networks:
@@ -64,11 +64,6 @@ services:
     cap_drop: [ALL]
     cap_add: [NET_BIND_SERVICE]
     user: "1001:1001"
-    volumes:
-      - type: bind
-        source: /mnt/deledger-backups
-        target: /mnt/deledger-backups
-        read_only: true
     restart: unless-stopped
     logging:
       driver: json-file
@@ -93,7 +88,7 @@ services:
       DATABASE_URL: postgresql://postgres@postgres:5432/deledger
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       BACKUP_TARGET: /mnt/deledger-backups
-      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT is required}
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
     depends_on:
       postgres: {condition: service_healthy}
     networks: [data]
