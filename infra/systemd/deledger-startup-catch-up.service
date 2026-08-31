@@ -1,0 +1,13 @@
+[Unit]
+Description=Deledger startup calendar catch-up
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/deledger/runtime.env
+ExecStartPre=/usr/bin/docker compose --env-file /etc/deledger/runtime.env -f /home/admin/vault/deledger/infra/compose.yaml up --wait --no-recreate postgres
+ExecStart=/home/admin/vault/deledger/infra/systemd/startup-catch-up.sh
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only

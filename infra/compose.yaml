@@ -1,0 +1,128 @@
+name: deledger
+
+services:
+  postgres:
+    build:
+      context: ..
+      dockerfile: db/Dockerfile
+    environment:
+      POSTGRES_DB: deledger
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
+      DELEDGER_WEB_PASSWORD_FILE: /run/secrets/web_password
+      DELEDGER_MAINTENANCE_PASSWORD_FILE: /run/secrets/maintenance_password
+      DELEDGER_OPERATOR_PASSWORD_FILE: /run/secrets/operator_password
+    secrets:
+      - postgres_password
+      - web_password
+      - maintenance_password
+      - operator_password
+    networks:
+      - data
+    volumes:
+      - deledger_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d deledger"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
+
+  web:
+    build:
+      context: ..
+      dockerfile: web/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: "80"
+      APP_ORIGIN: http://deledger.internal
+      BUSINESS_TIME_ZONE: Asia/Bangkok
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      CLOUDFLARE_TEAM_DOMAIN: ${CLOUDFLARE_TEAM_DOMAIN:?CLOUDFLARE_TEAM_DOMAIN is required}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:?CLOUDFLARE_ACCESS_AUD is required}
+      BACKUP_TARGET: /mnt/deledger-backups
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks:
+      edge:
+        aliases: [deledger.internal]
+      data: {}
+    expose: ["80"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:80/api/health/live').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    user: "1001:1001"
+    volumes:
+      - type: bind
+        source: /mnt/deledger-backups
+        target: /mnt/deledger-backups
+        read_only: true
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.7.2
+    command: ["tunnel", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN is required}"]
+    networks: [edge]
+    depends_on:
+      web: {condition: service_healthy}
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
+
+  backup:
+    build:
+      context: ..
+      dockerfile: infra/backup/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres@postgres:5432/deledger
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      BACKUP_TARGET: /mnt/deledger-backups
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT is required}
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [data]
+    secrets:
+      - postgres_password
+    volumes:
+      - type: bind
+        source: /mnt/deledger-backups
+        target: /mnt/deledger-backups
+    user: "1001:1001"
+    profiles: [operations]
+
+networks:
+  edge:
+    name: deledger_edge
+  data:
+    name: deledger_data
+    internal: true
+
+volumes:
+  deledger_pgdata:
+    name: deledger_pgdata
+
+secrets:
+  postgres_password:
+    file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/postgres_password
+  web_password:
+    file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/web_password
+  maintenance_password:
+    file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/maintenance_password
+  operator_password:
+    file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/operator_password

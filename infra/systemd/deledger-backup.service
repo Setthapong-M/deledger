@@ -1,0 +1,19 @@
+[Unit]
+Description=Deledger encrypted PostgreSQL backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=deledger-backup
+Group=deledger-backup
+SupplementaryGroups=docker
+EnvironmentFile=/etc/deledger/runtime.env
+EnvironmentFile=/etc/deledger/backup.env
+ExecStartPre=/usr/bin/mountpoint -q /mnt/deledger-backups
+ExecStart=/usr/bin/docker compose --profile operations -f /home/admin/vault/deledger/infra/compose.yaml run --rm backup
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/mnt/deledger-backups

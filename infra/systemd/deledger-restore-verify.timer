@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly Deledger restore verification
+
+[Timer]
+OnCalendar=Sun *-*-* 04:15:00 Asia/Bangkok
+Persistent=true
+Unit=deledger-restore-verify.service
+
+[Install]
+WantedBy=timers.target
