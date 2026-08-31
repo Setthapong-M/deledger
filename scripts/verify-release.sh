@@ -19,7 +19,16 @@ export DATABASE_URL CLOUDFLARE_TEAM_DOMAIN CLOUDFLARE_ACCESS_AUD CLOUDFLARE_TUNN
 
 [[ "$(node --version)" == "v22.23.1" ]] || fail "Node 22.23.1 required"
 [[ "$(pnpm --version)" == "11.1.3" ]] || fail "pnpm 11.1.3 required"
-for command in docker mountpoint find sha256sum; do require_command "$command"; done
+for command in docker mountpoint find sha256sum stat; do require_command "$command"; done
+
+secret_dir="${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}"
+[[ -d "$secret_dir" ]] || fail "Compose secret directory is required: $secret_dir"
+for secret_name in postgres_password web_password maintenance_password operator_password; do
+  secret_path="$secret_dir/$secret_name"
+  [[ -r "$secret_path" ]] || fail "Compose secret is not readable: $secret_path"
+  secret_mode="$(stat -c '%a' "$secret_path")"
+  [[ "$secret_mode" =~ 0$ ]] || fail "Compose secret must not be world-readable: $secret_path"
+done
 
 backup_target=/mnt/deledger-backups
 [[ -d "$backup_target" ]] && mountpoint -q "$backup_target" || fail "backup mount is required"

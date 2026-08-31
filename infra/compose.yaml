@@ -119,10 +119,10 @@ volumes:
 
 secrets:
   postgres_password:
-    external: true
+    file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/postgres_password
   web_password:
-    external: true
+    file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/web_password
   maintenance_password:
-    external: true
+    file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/maintenance_password
   operator_password:
-    external: true
+    file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/operator_password

@@ -1,4 +1,8 @@
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 describe("private deployment boundary", () => {
@@ -17,6 +21,34 @@ describe("private deployment boundary", () => {
     expect(compose).toContain("infra/backup/Dockerfile");
     expect(compose).toContain("POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password");
     expect(compose).toContain("profiles: [operations]");
+    expect(compose).toContain("file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/postgres_password");
+    expect(compose).not.toContain("external: true");
+  });
+
+  it("renders the local Compose stack without requiring Docker Swarm", async () => {
+    const secretDir = await mkdtemp(join(tmpdir(), "deledger-compose-secrets-"));
+    try {
+      for (const name of ["postgres_password", "web_password", "maintenance_password", "operator_password"]) {
+        await writeFile(join(secretDir, name), "test-only-placeholder\n", { mode: 0o640 });
+      }
+      const composeFile = fileURLToPath(new URL("../../../infra/compose.yaml", import.meta.url));
+      const result = spawnSync("docker", ["compose", "--profile", "operations", "-f", composeFile, "config", "--quiet"], {
+        cwd: fileURLToPath(new URL("../../../", import.meta.url)),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          DELEDGER_SECRET_DIR: secretDir,
+          DATABASE_URL: "postgresql://deledger_web:test-only@postgres:5432/deledger",
+          CLOUDFLARE_TEAM_DOMAIN: "https://team.cloudflareaccess.com",
+          CLOUDFLARE_ACCESS_AUD: "test-only",
+          CLOUDFLARE_TUNNEL_TOKEN: "test-only",
+          BACKUP_AGE_RECIPIENT: "age1testonly",
+        },
+      });
+      expect(result.status, result.stderr).toBe(0);
+    } finally {
+      await rm(secretDir, { recursive: true, force: true });
+    }
   });
 
   it("documents exact private WARP and Access controls", async () => {

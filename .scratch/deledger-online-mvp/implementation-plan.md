@@ -95,7 +95,7 @@ Wayfinder และ executable specification เคาะ business/architecture 
 | Money | DB คำนวณ numeric; application validate/transport เป็น canonical decimal string | หลีกเลี่ยง floating-point drift |
 | UI state | Server returns complete Month View และ `allowedActions`; client refreshes full view after mutation | ลด duplicated business rules และทำ conflict recovery ตรงไปตรงมา |
 | Reordering | Custom Pointer Events drag handle พร้อม keyboard Up/Down fallback; ไม่เพิ่ม drag library | รองรับ touch/keyboard โดยไม่เพิ่ม dependency นอก baseline |
-| Operations | Docker Compose networks `edge`/`data`, systemd timers สำหรับ backup/restore verification | ไม่มี host port และใช้งาน schedule ของเครื่อง local ได้ชัดเจน |
+| Operations | Docker Compose networks `edge`/`data`, operator-managed file-backed secrets under `DELEDGER_SECRET_DIR`, systemd timers สำหรับ backup/restore verification | ไม่มี host port, ใช้ได้กับ local Docker ที่ไม่ได้เปิด Swarm และใช้งาน schedule ของเครื่อง local ได้ชัดเจน |
 | Plan execution | Sequential Gates 1–8; UI แยก component ได้หลัง API/Month View contract ถูก freeze ที่ Gate 5 | ตัด rework จากการทำหน้าบ้านก่อน authority contracts |
 | Test method | Vertical-slice TDD: one public-seam test → minimal implementation → repeat; refactor แยกไว้ใน review หลัง Green | ทำให้ tests ตรวจ observable behavior และไม่สร้าง horizontal imagined suite |
 | Test database | Real disposable PostgreSQL 18.6 + pg_cron ผ่าน `infra/compose.test.yaml`; test files run serially when sharing DB | RLS, numeric, locks, constraints และ cron semantics จำลองด้วย mock ไม่ได้อย่างน่าเชื่อถือ |
@@ -822,9 +822,9 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
 - [x] **7.1 Compose the isolated runtime** `infra` `security` `high`
   - Red: `deployment.integration.test.ts` parses/render-checks production Compose for port/network/secret/runtime restrictions before Compose implementation.
   - `infra/compose.yaml` defines `postgres` on `data` only with no published ports; `web` on `edge` + `data` under alias `deledger.internal`; `cloudflared:2026.7.2` on `edge` only; and an explicitly invoked `backup` profile on `data` only.
-  - `web` runs non-root, read-only root filesystem, tmpfs for runtime temp, all capabilities dropped except `NET_BIND_SERVICE`, port 80 exposed only to Compose network. `cloudflared` alone receives Tunnel token. PostgreSQL uses named volume and secrets scoped by service.
+  - `web` runs non-root, read-only root filesystem, tmpfs for runtime temp, all capabilities dropped except `NET_BIND_SERVICE`, port 80 exposed only to Compose network. `cloudflared` alone receives Tunnel token. PostgreSQL uses named volume and operator-managed file-backed secrets under `DELEDGER_SECRET_DIR` (default `/etc/deledger/secrets`), scoped by service and readable outside the repository.
   - Health checks, `restart: unless-stopped`, log rotation and dependency health are explicit. Web receives neither Tunnel token nor backup private key; cloudflared receives no DB URL.
-  - **Audit:** automated deployment suite plus `docker compose config` proves zero `ports:` entries, exact network membership/secret separation and non-root/capability/read-only settings.
+  - **Audit:** automated deployment suite plus `docker compose config` proves zero `ports:` entries, exact network membership/secret separation, non-root/capability/read-only settings, and local non-Swarm Compose rendering with disposable file-backed secrets.
 
 - [ ] **7.2 Document and validate Cloudflare private Access configuration** `infra` `security`
   - Checklist covers named Tunnel private hostname `deledger.internal:80`, private Access app, Email OTP, “Authenticate with Cloudflare One Client”, exact-email allow rules, Gateway allow then catch-all block, and WARP Traffic and DNS enrollment.
