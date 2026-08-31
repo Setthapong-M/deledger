@@ -10,22 +10,22 @@ export type MutationContext = { client: PoolClient; ownerId: string; requestId: 
 export type RevisionInput = { monthStart: string; expectedRevision: string };
 
 export async function updateIncome(context: MutationContext, input: RevisionInput & { income: string }): Promise<MonthView> {
-  const amount = parseMoney(input.income);
+  const amount = parseAmount(input.income, "amount");
   await lockMonth(context, input.monthStart, input.expectedRevision);
   await context.client.query("UPDATE public.reporting_month SET income_amount = $3, updated_at = clock_timestamp(), revision = revision + 1 WHERE owner_id = $1 AND month_start = $2", [context.ownerId, input.monthStart, amount]);
   return requiredView(context, input.monthStart);
 }
 
 export async function updateEndingBalance(context: MutationContext, input: RevisionInput & { endingBalance: string }): Promise<MonthView> {
-  const amount = parseMoney(input.endingBalance);
+  const amount = parseAmount(input.endingBalance, "amount");
   await lockMonth(context, input.monthStart, input.expectedRevision);
   await context.client.query("UPDATE public.reporting_month SET ending_balance_amount = $3, updated_at = clock_timestamp(), revision = revision + 1 WHERE owner_id = $1 AND month_start = $2", [context.ownerId, input.monthStart, amount]);
   return requiredView(context, input.monthStart);
 }
 
 export async function recordSnapshot(context: MutationContext, input: RevisionInput & { observedOn: string; amount: string }): Promise<MonthView> {
-  assertIsoDate(input.observedOn);
-  const amount = parseMoney(input.amount);
+  try { assertIsoDate(input.observedOn); } catch { throw new DomainError("INVALID_INPUT", "วันที่ Snapshot ไม่ถูกต้อง", "observedOn"); }
+  const amount = parseAmount(input.amount, "amount");
   const month = await lockMonth(context, input.monthStart, input.expectedRevision);
   if (month.closed_at !== null) throw new DomainError("MONTH_NOT_OPEN", "บันทึก Snapshot ได้เฉพาะเดือนที่เปิดอยู่");
   const allowed = await context.client.query(
@@ -116,7 +116,7 @@ export async function confirmExpenseDetail(context: MutationContext, input: Revi
   const existing = await context.client.query<{ confirmed_kind: SetupKind }>("SELECT confirmed_kind FROM public.monthly_expense_detail WHERE owner_id = $1 AND month_start = $2 AND setup_item_id = $3", [context.ownerId, input.monthStart, input.setupItemId]);
   if (existing.rows[0] && !input.replace) throw new DomainError("DETAIL_ALREADY_CONFIRMED", "รายการนี้ยืนยันแล้ว");
   if (existing.rows[0] && existing.rows[0].confirmed_kind === "fixed") throw new DomainError("SETUP_ITEM_CONFIRMED", "รายการ Fixed ต้องยกเลิกก่อนยืนยันใหม่");
-  const amount = setup.kind === "fixed" ? setup.fixed_amount! : parseMoney(input.amount);
+  const amount = setup.kind === "fixed" ? setup.fixed_amount! : parseAmount(input.amount, "amount");
   if (existing.rows[0]) await context.client.query("DELETE FROM public.monthly_expense_detail WHERE owner_id = $1 AND month_start = $2 AND setup_item_id = $3", [context.ownerId, input.monthStart, input.setupItemId]);
   await context.client.query("INSERT INTO public.monthly_expense_detail (owner_id, month_start, setup_item_id, confirmed_name, confirmed_kind, confirmed_amount) VALUES ($1, $2, $3, $4, $5, $6)", [context.ownerId, input.monthStart, input.setupItemId, setup.name, setup.kind, amount]);
   await bumpRevision(context, input.monthStart);
@@ -181,8 +181,12 @@ async function requiredView(context: MutationContext, monthStart: string): Promi
 function normalizeSetup(name: string, kind: SetupKind, fixedAmount: string | null | undefined): { name: string; kind: SetupKind; fixedAmount: string | null } {
   const normalizedName = name.trim();
   if (normalizedName === "" || normalizedName.length > 200) throw new DomainError("INVALID_INPUT", "กรอกรายละเอียดรายจ่ายให้ถูกต้อง", "name");
-  if (kind === "fixed") return { name: normalizedName, kind, fixedAmount: parseMoney(fixedAmount) };
+  if (kind === "fixed") return { name: normalizedName, kind, fixedAmount: parseAmount(fixedAmount, "fixedAmount") };
   if (kind !== "variable") throw new DomainError("INVALID_INPUT", "ประเภทค่าใช้จ่ายไม่ถูกต้อง", "kind");
   if (fixedAmount !== undefined && fixedAmount !== null) throw new DomainError("INVALID_INPUT", "Variable ไม่รับยอดประจำ", "fixedAmount");
   return { name: normalizedName, kind, fixedAmount: null };
+}
+
+function parseAmount(value: unknown, field: string): string {
+  try { return parseMoney(value); } catch { throw new DomainError("INVALID_INPUT", "ยอดเงินไม่ถูกต้อง", field); }
 }

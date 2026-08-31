@@ -6,7 +6,7 @@ Requires=docker.service
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/deledger/runtime.env
-ExecStart=/usr/bin/docker compose -f /home/admin/vault/deledger/infra/compose.yaml exec -T postgres psql --username postgres --dbname deledger --command SELECT\ public.catch_up_reporting_months\(\)
+ExecStart=/usr/bin/docker compose -f /home/admin/vault/deledger/infra/compose.yaml exec -T postgres psql --username postgres --dbname deledger --command "SELECT public.catch_up_reporting_months();"
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true

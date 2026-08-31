@@ -39,7 +39,12 @@ pnpm test:unit
 pnpm test:integration
 pnpm test:e2e
 pnpm test:ops
+pnpm test:coverage
+pnpm test:all
+pnpm verify:release
 ```
+
+`test:integration`, `test:ops`, and `test:coverage` create and remove the disposable loopback PostgreSQL stack automatically. Browser tests use local fixtures and never call Cloudflare or production data.
 
 ## Project documents
 

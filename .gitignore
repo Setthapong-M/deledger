@@ -27,3 +27,7 @@ test-results/
 # Generated review pages and local prototypes
 .scratch/**/html-preview/
 /prototypes/
+
+# Next development metadata
+/web/AGENTS.md
+/web/CLAUDE.md

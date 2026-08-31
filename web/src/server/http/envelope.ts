@@ -17,6 +17,7 @@ export function statusForCode(code: DomainErrorCode): number {
   if (code === "MONTH_NOT_OPEN" || code === "MANUAL_CLOSE_NOT_ALLOWED" || code === "SUMMARY_INCOMPLETE" || code === "SUMMARY_INCONSISTENT" || code === "DETAIL_ALREADY_CONFIRMED" || code === "SETUP_ITEM_CONFIRMED") return 422;
   if (code === "REVISION_REQUIRED") return 428;
   if (code === "SERVICE_UNAVAILABLE") return 503;
+  if (code === "INTERNAL_ERROR") return 500;
   return 400;
 }
 

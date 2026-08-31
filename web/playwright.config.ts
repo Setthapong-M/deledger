@@ -1,5 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const projects = [
+  { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+  { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+  { name: "webkit", use: { ...devices["Desktop Safari"] } },
+  { name: "mobile-webkit", use: { ...devices["iPhone 13"] } },
+];
+const selectedProjects = process.env.DELEDGER_E2E_PROJECTS ? new Set(process.env.DELEDGER_E2E_PROJECTS.split(",")) : null;
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
@@ -21,10 +29,5 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
-  projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
-    { name: "mobile-webkit", use: { ...devices["iPhone 13"] } },
-  ],
+  projects: selectedProjects ? projects.filter((project) => selectedProjects.has(project.name)) : projects,
 });

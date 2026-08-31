@@ -16,10 +16,10 @@
     "db:rollback": "node-pg-migrate down -m db/migrations",
     "test:db": "node scripts/test-db.mjs",
     "test:unit": "pnpm --dir web vitest run --project unit",
-    "test:integration": "pnpm --dir web vitest run --project integration",
+    "test:integration": "node scripts/test-integration.mjs",
     "test:e2e": "pnpm --dir web playwright test",
-    "test:ops": "pnpm --dir web vitest run --project operations",
-    "test:coverage": "pnpm --dir web vitest run --coverage",
+    "test:ops": "node scripts/test-operations.mjs",
+    "test:coverage": "node scripts/test-coverage.mjs",
     "test:all": "pnpm test:unit && pnpm test:integration && pnpm test:e2e && pnpm test:ops && pnpm test:coverage",
     "operator:user": "node scripts/operator/user.mjs",
     "verify:release": "bash scripts/verify-release.sh"

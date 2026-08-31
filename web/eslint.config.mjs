@@ -1,5 +1,5 @@
 export default [
   {
-    ignores: ["**/*.ts", "**/*.tsx", ".next/**", "next-env.d.ts"],
+    ignores: ["**/*.ts", "**/*.tsx", ".next/**", "coverage/**", "playwright-report/**", "test-results/**", "next-env.d.ts"],
   },
 ];

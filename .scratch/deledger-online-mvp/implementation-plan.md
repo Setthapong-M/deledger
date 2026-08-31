@@ -3,8 +3,8 @@
 Date: 2026-08-31
 Author: Codex
 Source repository: `Setthapong-M/deledger`
-Source branch: `main`
-Status: in progress — Gate 5
+Source branch: `online-mvp`
+Status: implementation complete — Gate 8; host activation pending operator-managed backup/Cloudflare secrets
 Predecessors: `Online Deledger MVP — Executable Technical Specification`, `Wayfinder: Online Deledger MVP`, ADR 0001–0006
 
 > 🤖 **Execution method:** ใช้ sequential gated implementation + vertical-slice TDD ใน source repository นี้โดยตรง ทุก behavior ทำ Red → Green ทีละ test ผ่าน public seam และ commit เฉพาะสถานะ Green แต่ละ Gate ต้องผ่าน automated tests, Audit และ Build check ก่อน push checkpoint เพราะ schema → identity → domain operations → HTTP contracts → UI → deployment พึ่งพากันตามลำดับ ห้ามใช้ PARA workspace กับแผนนี้
@@ -60,7 +60,7 @@ Wayfinder และ executable specification เคาะ business/architecture 
 - Cloudflare policy automation; operator ทำ dashboard action ตามข้อความที่ CLI แสดง
 - การแก้หรือย้าย nested Git repository `prototypes/`; root repo จะ ignore directory นี้และใช้ specification เป็น implementation authority
 - Git tag, GitHub Release, automatic PR merge, force-push และ deployment จาก GitHub Actions
-- GitHub Actions CI; automated suites รัน locally/ใน release verification ก่อนทุก push ตามแผนนี้
+- Automatic production deployment from GitHub Actions; CI was added per User request and runs disposable verification only (no production secrets or deployment credentials)
 - User-observed manual UI test session; automated component/E2E/accessibility tests อยู่ใน scope แล้ว
 
 ## Decisions
@@ -79,7 +79,7 @@ Wayfinder และ executable specification เคาะ business/architecture 
 | History UI | ใช้โครง Variant C: synchronized top Filmstrip + Cover Flow โดย centered Cover มีรายละเอียด minimal ครบ และใช้สีใน Private Beta |
 | Private Beta color/theme | ใช้ Neutral Ledger ทั้ง Light/Dark: ขาว ดำ เทาเป็นฐาน และ exact opaque `#B5C69C` เป็น chromatic accent เดียวโดยห้ามทำให้อ่อน/เข้ม/โปร่ง/ผสมสี; พื้น accent ใช้ text/icon `#262626`; ครั้งแรกตาม system และให้เลือก “ตามระบบ / สว่าง / มืด”; สถานะใช้ข้อความ ไอคอน เส้นขอบ และ pattern ไม่ใช้หลายสีแยกประเภท |
 | Automated tests | รวม unit, PostgreSQL integration, auth, service, API contract, component, Playwright E2E, accessibility และ operations/recovery tests |
-| Source Git actions | ใช้ branch `online-mvp`, passing Gate commits, push checkpoint ทุก Gate และเปิด Pull Request หลัง Gate 8; ไม่ merge/tag/force-push อัตโนมัติ |
+| Source Git actions | ใช้ branch `online-mvp`, passing Gate commits, push checkpoint ทุก Gate, GitHub Actions CI สำหรับ disposable checks และเปิด Pull Request หลัง Gate 8; ไม่ merge/tag/force-push/deploy อัตโนมัติ |
 
 ### Architecture decisions
 
@@ -184,7 +184,7 @@ All Dark foreground/background pairs pass WCAG AA for normal text. The fixed pri
 
 ## Files to change / create
 
-รายการนี้เป็น intended implementation surface จำนวน 133 paths; generated `.next/`, `node_modules/`, Playwright artifacts, coverage, dumps, secrets และ local runtime files ต้องไม่ถูก track
+รายการนี้เป็น intended implementation surface จำนวน 133 baseline paths; Gate 8 เพิ่มเฉพาะ operational scripts/docs/workflow ที่ได้รับอนุมัติภายหลัง. generated `.next/`, `node_modules/`, Playwright artifacts, coverage, dumps, secrets และ local runtime files ต้องไม่ถูก track
 
 ### Root and web foundation (20)
 
@@ -349,7 +349,7 @@ All Dark foreground/background pairs pass WCAG AA for normal text. The fixed pri
 | NEW | `web/tests/operations/deployment.integration.test.ts` |
 | NEW | `web/tests/operations/recovery.integration.test.ts` |
 
-> Audit note: ตารางย่อยรวม 20 + 27 + 19 + 23 + 19 + 25 = **133 paths**; ห้ามเพิ่มไฟล์นอก list โดยไม่แก้ plan/audit ก่อน
+> Audit note: ตารางย่อยเดิมรวม 20 + 27 + 19 + 23 + 19 + 25 = **133 baseline paths**. Gate 8 เพิ่ม operational surface ที่ระบุใน completion record และห้ามเพิ่มไฟล์อื่นโดยไม่แก้ plan/audit ก่อน
 
 ## Core contracts to implement exactly
 
@@ -887,7 +887,7 @@ pnpm test:ops
 pnpm test:coverage
 ```
 
-Expected result: all suites Green across configured browser projects; coverage meets statements/lines/functions 90% and branches 85%; test database/containers are disposable and production resources were never addressed
+Expected result: all suites Green across configured browser projects; coverage meets statements/lines/functions 90% and branches 85%; test database/containers are disposable and production resources were never addressed. On this host Chromium/Firefox run locally; CI installs the WebKit OS dependencies for the full four-project matrix.
 
 ## Build check
 
@@ -900,7 +900,7 @@ pnpm lint
 pnpm typecheck
 pnpm build
 pnpm test:all
-docker build -f db/Dockerfile db
+docker build -f db/Dockerfile .
 docker build -f web/Dockerfile .
 docker compose -f infra/compose.yaml config --quiet
 pnpm db:migrate -- --check-order
@@ -915,14 +915,16 @@ Executor updates only after commands/audits truly pass:
 
 | Gate | Exit artifact | Status |
 |---|---|---|
-| 1 | Reproducible locked scaffold/test harness + pushed branch | Pending |
-| 2 | Seven-table schema, forced RLS, derived Month View + Green DB suites | Pending |
-| 3 | Verified Cloudflare identity + Green auth suite | Pending |
-| 4 | Atomic services/operator CLI + Green service/operations suites | Pending |
-| 5 | Frozen JSON API/Month View + Green contract suite | Pending |
-| 6 | Responsive Neutral Ledger User flows/history + Green component/E2E/accessibility suites | Pending |
-| 7 | Private deployment + Green deployment suite | Pending |
-| 8 | Recovery/release checks + final push and open PR | Pending |
+| 1 | Reproducible locked scaffold/test harness + pushed branch | Passed |
+| 2 | Seven-table schema, forced RLS, derived Month View + Green DB suites | Passed |
+| 3 | Verified Cloudflare identity + Green auth suite | Passed |
+| 4 | Atomic services/operator CLI + Green service/operations suites | Passed |
+| 5 | Frozen JSON API/Month View + Green contract suite | Passed |
+| 6 | Responsive Neutral Ledger User flows/history + Green component/E2E/accessibility suites | Passed locally (Chromium/Firefox); WebKit OS dependencies covered by CI |
+| 7 | Private deployment + Green deployment suite | Passed (static/runtime checks); Cloudflare/WARP activation remains operator-run |
+| 8 | Recovery/release checks + final push and open PR | Implementation passed; host release check awaits mounted backup target and operator secrets |
+
+Gate 8 approved additions: `.github/workflows/ci.yml`, `docs/operations/backup-restore.md`, `docs/operations/operator-runbook.md`, `docs/operations/release-checklist.md`, `infra/backup/README.md`, `infra/backup/backup.sh`, `infra/backup/restore-verify.sh`, `infra/systemd/*`, `scripts/test-integration.mjs`, `scripts/test-operations.mjs`, `scripts/test-coverage.mjs`, `scripts/verify-release.sh`, and `web/tests/operations/recovery.integration.test.ts`.
 
 ## Risk register
 
@@ -955,7 +957,7 @@ Executor updates only after commands/audits truly pass:
 ## Out-of-scope follow-ups
 
 - Perform a user-observed manual UI validation session after Gate 6 when requested
-- Add GitHub Actions CI only after deciding runner type, secret scope and whether private integration/E2E suites may execute outside the local host
+- Execute the GitHub Actions CI workflow after the Pull Request is opened; it uses disposable resources and no production secrets
 - Convert or publish the independent prototype repository only after its owner resolves current uncommitted changes
 - Register `deledgr.com` and replace the private edge when the 10-year domain decision is made
 - Add credit-card billing-cycle model in Phase 2 as a separate Wayfinder effort
@@ -966,10 +968,10 @@ Executor updates only after commands/audits truly pass:
 - [x] Authority and domain vocabulary align with `CONTEXT.md`, ADR 0001–0006 and executable specification
 - [x] No unresolved business or architecture placeholder remains
 - [x] Execution method is sequential and justified by dependency gates
-- [x] User-authorized automated tests and source Git branch/commit/push/PR actions are in scope; merge/tag/release/CI/manual UI remain explicit exclusions
+- [x] User-authorized automated tests, GitHub Actions CI, and source Git branch/commit/push/PR actions are in scope; merge/tag/release/automatic deployment/manual UI remain explicit exclusions
 - [x] Test seams are fixed at domain, PostgreSQL, auth, services, HTTP, UI and operations public boundaries
 - [x] TDD loop is vertical Red → Green per behavior; internal mocks, tautological expectations and committed Red states are prohibited
-- [x] All implementation paths are listed and reconciled to 133 paths
+- [x] Baseline implementation paths are listed and reconciled to 133 paths; approved Gate 8 operational additions are listed in the completion record
 - [x] Every task names exact paths/contracts, an audit and a Gate condition
 - [x] Database changes use new immutable numbered migrations; no existing migration is edited
 - [x] Forced RLS, transaction-local identity, revision conflict and deterministic lock order are explicit
