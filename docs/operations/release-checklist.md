@@ -17,4 +17,4 @@
 - Passed: `docker build -f db/Dockerfile .`, `docker build -f web/Dockerfile .`, `docker build -f infra/backup/Dockerfile .`, production Compose config, systemd unit syntax, and staged-path/private-key checks.
 - Passed: startup catch-up waits for a healthy PostgreSQL container, reads its password only from the Docker secret, and all repo-backed systemd units retain read-only access under `ProtectHome`.
 - Environment note: this host lacks two WebKit OS libraries; the GitHub Actions workflow installs browser dependencies and runs the full Chromium/Firefox/WebKit/mobile-WebKit matrix.
-- Pending operator activation: `/mnt/deledger-backups` mount, backup artifact, restore marker, production secrets, and Cloudflare/WARP policy. `scripts/verify-release.sh` intentionally remains fail-closed until those values exist.
+- Pending operator activation: host `age`, `/mnt/deledger-backups` mount, backup artifact, restore marker, production secrets, and Cloudflare/WARP policy. `scripts/verify-release.sh` intentionally remains fail-closed until those values exist.

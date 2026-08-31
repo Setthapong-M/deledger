@@ -248,6 +248,7 @@ pause "After migration and catch-up complete, press Enter."
 
 stage "Recovery: daily backup and weekly restore"
 say "Readiness stays fail-closed until both checks have succeeded."
+step "Install the host age package; restore verification decrypts with the host age binary while the backup image carries its own age binary for encryption."
 step "Create /etc/deledger/backup.env with BACKUP_TARGET=/mnt/deledger-backups, BACKUP_AGE_RECIPIENT, DATABASE_URL, and the offline BACKUP_AGE_IDENTITY."
 step "Enable deledger-backup.timer and run deledger-backup.service once; it invokes the isolated Compose backup profile on the private data network."
 step "Enable deledger-restore-verify.timer and run deledger-restore-verify.service once."

@@ -26,5 +26,7 @@ describe("backup and recovery safety", () => {
     expect(backupDockerfile).toContain("postgres:18.6-bookworm");
     expect(backupDockerfile).toContain("apt-get install");
     expect(backupDockerfile).toContain("age");
+    const releaseCheck = await readFile(new URL("../../../scripts/verify-release.sh", import.meta.url), "utf8");
+    expect(releaseCheck).toContain("for command in age docker mountpoint find sha256sum stat");
   });
 });

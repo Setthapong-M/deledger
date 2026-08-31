@@ -863,7 +863,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - **Audit:** recovery suite restores newest test artifact and rejects corrupt copy without touching production-named resources or deleting last good backup.
 
 - [ ] **8.3 Complete release checks and operational hand-off** `verify` `gate` `high`
-  - `verify-release.sh` checks exact toolchain, frozen install, lint, TypeScript, Next production build, web/db Docker builds, Compose config, migration head, forced RLS, pg_cron schedule, no host ports, backup mount, latest backup and weekly restore marker.
+  - `verify-release.sh` checks exact toolchain, host `age` availability for restore verification, frozen install, lint, TypeScript, Next production build, web/db Docker builds, Compose config, migration head, forced RLS, pg_cron schedule, no host ports, backup mount, latest backup and weekly restore marker.
   - Runbooks document first deploy, upgrade/rollback boundary, invite/archive/restore/transfer/export, WARP onboarding, outage recovery, backup key custody and restore drill.
   - Verify production image contains no `.env`, `.scratch`, prototypes, source maps with secrets, plaintext export or backup key.
   - Release state is `Ready` only when every required check passes; best-effort/no-SLA limitation is visible in operator runbook.

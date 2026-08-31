@@ -19,7 +19,7 @@ export DATABASE_URL CLOUDFLARE_TEAM_DOMAIN CLOUDFLARE_ACCESS_AUD CLOUDFLARE_TUNN
 
 [[ "$(node --version)" == "v22.23.1" ]] || fail "Node 22.23.1 required"
 [[ "$(pnpm --version)" == "11.1.3" ]] || fail "pnpm 11.1.3 required"
-for command in docker mountpoint find sha256sum stat; do require_command "$command"; done
+for command in age docker mountpoint find sha256sum stat; do require_command "$command"; done
 
 secret_dir="${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}"
 [[ -d "$secret_dir" ]] || fail "Compose secret directory is required: $secret_dir"

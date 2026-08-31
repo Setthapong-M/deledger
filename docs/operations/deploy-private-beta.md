@@ -6,7 +6,7 @@
 3. Copy the production environment values to the operator-managed environment file. Set the private Access team domain, audience, and Tunnel token; never put these in Git.
 4. Build and start PostgreSQL and the web image with `docker compose -f infra/compose.yaml up -d --build`.
 5. Run migrations from the operator shell with `DATABASE_URL` set to the migration connection, then install and run the startup catch-up service. It waits for the PostgreSQL health check and reads the admin password only from the container secret.
-6. Create the `deledger-backup` system user, grant it only the Docker invocation permission required by the Compose backup profile and write access to the mounted target, then install and enable the backup, restore-verification, and startup-catch-up systemd timers.
+6. Install the host `age` package for the restore-verification service. Create the `deledger-backup` system user, grant it only the Docker invocation permission required by the Compose backup profile and write access to the mounted target, then install and enable the backup, restore-verification, and startup-catch-up systemd timers.
 7. Complete `infra/cloudflare/access-policy-checklist.md`, enroll WARP clients, and test one invited account.
 8. Check `/api/health/live` through the private route and authenticated readiness only after backup readiness is true. `scripts/verify-release.sh` must remain fail-closed until the mount, encrypted artifact, restore marker, production secrets, and Cloudflare/WARP policy all exist.
 
