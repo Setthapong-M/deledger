@@ -34,7 +34,7 @@ No changes to server, API, database, calculations, authorization, request bodies
 - [x] Install pinned dependencies and configure PostCSS + CSS-first theme. Audit: actual v4 compiler, no Tailwind v3 config, all existing primary colors preserved.
 - [x] Migrate component and page styling to static utilities with reusable primitives. Audit: no legacy styling selectors, runtime-generated utility names or handler changes; cover responsive, focus, disabled, selected, drag, paused and reconciliation states.
 - [x] Run lint/typecheck/build, unit/integration/operations/coverage, all-browser E2E; inspect before/after light/dark and mobile screenshots. Audit: preserve supported routes, typography, geometry and state behavior.
-- [ ] Commit only task-owned paths, push dev-uxui, update PR #6 title/body and evidence. Audit: PR remains open, no merge or auto-merge.
+- [x] Commit only task-owned paths, push dev-uxui, update PR #6 title/body and evidence. Audit: PR remains open, no merge or auto-merge.
 
 ## Build check
 pnpm qc; pnpm build; pnpm test:unit; pnpm test:integration; pnpm test:ops; pnpm test:coverage; pnpm test:e2e.
