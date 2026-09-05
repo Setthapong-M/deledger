@@ -1,4 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import { hydrateRoot } from "react-dom/client";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeControl } from "@/components/theme-control";
 
@@ -36,3 +38,24 @@ describe("ThemeControl", () => {
     expect(remove).toHaveBeenCalled();
   });
 });
+
+for (const preference of ["system", "dark", "light"]) {
+  it(`hydrates ${preference} theme without a server/client mismatch`, async () => {
+    const doc = document;
+    vi.stubGlobal("document", undefined);
+    const html = renderToString(<ThemeControl />);
+    vi.stubGlobal("document", doc);
+    if (preference !== "system") doc.documentElement.dataset.theme = preference;
+    else delete doc.documentElement.dataset.theme;
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+    const container = doc.createElement("div");
+    container.innerHTML = html;
+    doc.body.append(container);
+    const onRecoverableError = vi.fn();
+    let root: ReturnType<typeof hydrateRoot>;
+    await act(async () => { root = hydrateRoot(container, <ThemeControl />, { onRecoverableError }); });
+    expect(onRecoverableError).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+    container.remove();
+  });
+}
