@@ -41,6 +41,10 @@ Actual rendered pages with deterministic mocked API data, not real user records.
 
 WebKit initially could not launch because the host lacked GStreamer/AVIF dependencies. Public Ubuntu packages were extracted into the user's browser cache and linked only into Playwright's browser bundle; no application dependency or system package changes. The final normal `pnpm test:e2e` invocation passed.
 
-Validation ran in the supplied working tree, which already had unrelated deployment and PostgreSQL test-harness edits. Those pre-existing changes were left intact and excluded from this UI commit: infra/compose.yaml, scripts/setup-private-beta.sh, web/Dockerfile, web/next-env.d.ts, web/src/test/postgres.ts, web/tests/operations/deployment.integration.test.ts, web/tests/services/catch-up-history.integration.test.ts, web/tests/services/month-operations.integration.test.ts.
+Validation ran in the supplied working tree, which already had unrelated deployment and PostgreSQL test-harness edits. Those pre-existing changes were left intact and excluded from this UI commit: infra/compose.yaml, scripts/setup-private-beta.sh, web/Dockerfile, web/src/test/postgres.ts, web/tests/operations/deployment.integration.test.ts, web/tests/services/catch-up-history.integration.test.ts, web/tests/services/month-operations.integration.test.ts.
 
 Human usability review is still required. Shared CSS affects multiple routes, so regression risk remains medium despite automated coverage. No deployment or merge into main was performed.
+
+The generated `web/next-env.d.ts` started with dev-server type paths; the production build regenerated it to its tracked production type paths. It was not staged in the UI commit.
+
+PR: https://github.com/Setthapong-M/deledger/pull/6 (dev-uxui → main), opened for review without merging.

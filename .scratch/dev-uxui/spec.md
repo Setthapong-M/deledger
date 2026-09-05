@@ -41,7 +41,7 @@ NEW: web/e2e/uxui.spec.ts
 - [x] Refine history and supporting page copy. Audit: provisional spending labeled, gap has no reconciliation badge, history selection/refresh unchanged.
 - [x] Add browser regression coverage for estimate/confirmed/missing amounts, close review/cancel/confirmation, permissions, history gap, responsive and dark accessibility. Audit: verify user behavior and request payloads rather than CSS implementation.
 - [x] Run quality checks, production build, unit, integration, E2E and available operations/coverage suites. Capture desktop/mobile review screenshots. Audit: report exact failures/limitations and leave unrelated work untouched.
-- [ ] Review diff, commit only task-owned files, push dev-uxui and open PR targeting main. Audit: no merge; include reference basis, scope and validation evidence.
+- [x] Review diff, commit only task-owned files, push dev-uxui and open PR targeting main. Audit: no merge; include reference basis, scope and validation evidence.
 
 ## Build check
 `pnpm qc`, `pnpm build`, `pnpm test:unit`, `pnpm test:integration`, `pnpm test:e2e`, `pnpm test:ops`, `pnpm test:coverage`.
