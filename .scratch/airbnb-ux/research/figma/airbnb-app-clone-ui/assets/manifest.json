@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1.0",
+  "status": "partial",
+  "localEvidence": [
+    {"sourceNodeId":"0:1","sourcePage":"🐑 Cover","file":"../screens/0-1_cover-page.png","kind":"page_screenshot","format":"png","originalSize":"1920x960","exportedSize":"1800x900"},
+    {"sourceNodeId":"5:23","sourcePage":"📱 Mockup","file":"../screens/5-23_mockup-page.png","kind":"page_screenshot","format":"png","originalSize":"2402x1209","exportedSize":"1800x906"},
+    {"sourceNodeId":"2:13","sourcePage":"➕ Icons","file":"../screens/45-14021_icons-page.png","kind":"page_screenshot","format":"png","originalSize":"2768x603","exportedSize":"1800x432"},
+    {"sourceNodeId":"2:15","sourcePage":"💠 Components","file":"../screens/2-15_components-page.png","kind":"page_screenshot","format":"png","originalSize":"32874x2777","exportedSize":"1800x153"},
+    {"sourceNodeId":"2:16","sourcePage":"      ↳ iOS v.1.0","file":"../screens/2-16_ios-page.png","kind":"page_screenshot","format":"png","originalSize":"17283x32115","exportedSize":"969x1800"}
+  ],
+  "figmaExports": [],
+  "blocked": "Figma MCP rate limit prevented download_assets for icons, raw images, SVGs and individual nodes."
+}
