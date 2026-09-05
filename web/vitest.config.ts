@@ -28,7 +28,7 @@ export default defineConfig({
           name: "integration",
           include: ["tests/database/**/*.integration.test.ts", "tests/auth/**/*.integration.test.ts", "tests/services/**/*.integration.test.ts", "tests/api/**/*.integration.test.ts"],
           environment: "node",
-          setupFiles: ["src/test/setup.ts"],
+          setupFiles: ["src/test/setup.ts", "src/test/integration-setup.ts"],
           sequence: { concurrent: false, setupFiles: "list" },
           fileParallelism: false,
         },
