@@ -19,11 +19,11 @@ test("theme preference, keyboard focus and accessibility remain available", asyn
   await page.getByRole("menuitemradio", { name: "มืด" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await primaryProbe.hover({ force: true });
-  await expect(primaryProbe).toHaveCSS("background-color", "rgb(181, 198, 156)");
-  await expect(primaryProbe).toHaveCSS("color", "rgb(38, 38, 38)");
+  await expect(primaryProbe).toHaveCSS("background-color", "rgb(187, 204, 166)");
+  await expect(primaryProbe).toHaveCSS("color", "rgb(36, 41, 31)");
   await primaryProbe.focus();
-  await expect(primaryProbe).toHaveCSS("background-color", "rgb(181, 198, 156)");
-  await expect(primaryProbe).toHaveCSS("color", "rgb(38, 38, 38)");
+  await expect(primaryProbe).toHaveCSS("background-color", "rgb(187, 204, 166)");
+  await expect(primaryProbe).toHaveCSS("color", "rgb(36, 41, 31)");
   await theme.focus();
   await expect(theme).toBeFocused();
   const result = await new AxeBuilder({ page }).analyze();
