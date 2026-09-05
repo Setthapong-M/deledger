@@ -15,6 +15,7 @@ export const updateRecurringSchema = z.object({ name: z.string().trim().min(1).m
 export const reorderSchema = z.object({ orderedIds: z.array(uuid).min(0), expectedRevision: revision }).strict();
 export const detailSchema = z.object({ amount: decimal.optional(), expectedRevision: revision }).strict();
 export const closeSchema = z.object({ expectedRevision: revision }).strict();
+export const localLoginSchema = z.object({ identifier: z.string().trim().min(1).max(320) }).strict();
 export const monthQuerySchema = z.object({ before: monthKey.optional(), limit: z.coerce.number().int().min(1).max(24).default(24) }).strict();
 
 export function monthStart(key: string): string {

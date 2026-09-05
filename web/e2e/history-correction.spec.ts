@@ -11,3 +11,15 @@ test("history keeps the selected cover while refreshing a correction", async ({ 
   await page.getByRole("button", { name: "โหลดล่าสุด" }).click();
   await expect(page.getByRole("heading", { name: "สิงหาคม 2569" })).toBeVisible();
 });
+
+test("clears a populated history view when the session expires", async ({ page }) => {
+  await page.route("**/api/auth/mode", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { environment: "local" } }) }));
+  const selected = month("2026-08");
+  await page.route("**/api/months", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: [{ kind: "month", id: selected.month, view: selected }] }) }));
+  await page.route("**/api/months/2026-08", async (route) => route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: { code: "SESSION_INVALID", message: "ต้องเข้าสู่ระบบก่อน", field: null, current: null } }) }));
+  await page.goto("/history");
+  await expect(page.getByRole("heading", { name: "สิงหาคม 2569" })).toBeVisible();
+  await page.getByRole("button", { name: "โหลดล่าสุด" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole("heading", { name: "เข้าสู่ระบบ" })).toBeVisible();
+});

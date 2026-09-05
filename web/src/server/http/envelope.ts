@@ -10,10 +10,11 @@ export function failure(error: { code: DomainErrorCode; message: string; field?:
 }
 
 export function statusForCode(code: DomainErrorCode): number {
-  if (code === "ACCESS_TOKEN_MISSING" || code === "ACCESS_TOKEN_INVALID") return 401;
-  if (code === "USER_NOT_INVITED" || code === "USER_ARCHIVED") return 403;
+  if (code === "ACCESS_TOKEN_MISSING" || code === "ACCESS_TOKEN_INVALID" || code === "SESSION_INVALID") return 401;
+  if (code === "LOCAL_AUTH_DISABLED") return 403;
+  if (code === "USER_NOT_INVITED" || code === "USER_ARCHIVED" || code === "PROFILE_CONTACT_READ_ONLY") return 403;
   if (code === "MONTH_NOT_FOUND" || code === "SETUP_ITEM_NOT_FOUND") return 404;
-  if (code === "REVISION_CONFLICT" || code === "IDENTITY_CONFLICT") return 409;
+  if (code === "REVISION_CONFLICT" || code === "IDENTITY_CONFLICT" || code === "PROFILE_CONFLICT") return 409;
   if (code === "MONTH_NOT_OPEN" || code === "MANUAL_CLOSE_NOT_ALLOWED" || code === "SUMMARY_INCOMPLETE" || code === "SUMMARY_INCONSISTENT" || code === "DETAIL_ALREADY_CONFIRMED" || code === "SETUP_ITEM_CONFIRMED") return 422;
   if (code === "REVISION_REQUIRED") return 428;
   if (code === "SERVICE_UNAVAILABLE") return 503;

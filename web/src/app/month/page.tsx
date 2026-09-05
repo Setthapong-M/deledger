@@ -9,7 +9,7 @@ import { ExpenseSetupManager } from "@/components/expense-setup-manager";
 import { FeedbackBanner } from "@/components/feedback-banner";
 import { MonthSummary } from "@/components/month-summary";
 import { MonthTimeline } from "@/components/month-timeline";
-import { api, ApiClientError, type MonthView } from "@/lib/api-client";
+import { api, ApiClientError, isAuthenticationError, type MonthView } from "@/lib/api-client";
 
 type DialogKind = "income" | "snapshot" | "ending" | "close" | null;
 
@@ -18,19 +18,26 @@ export default function MonthPage() {
   const [state, setState] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogKind>(null);
+  const expireSession = useCallback(() => {
+    setView(null);
+    setState(null);
+    setDialog(null);
+    setError(null);
+    window.location.assign("/login");
+  }, []);
   const load = useCallback(async () => {
     setError(null);
-    try { const current = await api.current(); setState(current.state); setView(current.month); } catch (reason) { setError(reason instanceof Error ? reason.message : "โหลดข้อมูลไม่สำเร็จ"); }
-  }, []);
+    try { const current = await api.current(); setState(current.state); setView(current.month); } catch (reason) { if (isAuthenticationError(reason)) { expireSession(); return; } setError(reason instanceof Error ? reason.message : "โหลดข้อมูลไม่สำเร็จ"); }
+  }, [expireSession]);
   useEffect(() => { void load(); }, [load]);
   async function update(action: () => Promise<MonthView>) {
-    try { setView(await action()); setError(null); } catch (reason) { if (reason instanceof ApiClientError && reason.current) setView(reason.current); setError(reason instanceof Error ? reason.message : "บันทึกไม่สำเร็จ"); }
+    try { setView(await action()); setError(null); } catch (reason) { if (isAuthenticationError(reason)) { expireSession(); return; } if (reason instanceof ApiClientError && reason.current) setView(reason.current); setError(reason instanceof Error ? reason.message : "บันทึกไม่สำเร็จ"); }
   }
   if (error && !view) return <AppShell><section className="card empty-state"><h1>โหลดข้อมูลไม่สำเร็จ</h1><FeedbackBanner tone="warning">{error}</FeedbackBanner><button className="primary-button" type="button" onClick={() => void load()}>ลองใหม่</button></section></AppShell>;
   if (state === "onboarding_required") return <AppShell><section className="card empty-state"><h1>ยังไม่มีเดือนที่เริ่มติดตาม</h1><Link className="primary-button" href="/start">เริ่มเดือนแรก</Link></section></AppShell>;
   if (state === "resume_required") return <AppShell><section className="card empty-state"><h1>ต้องเริ่มติดตามใหม่</h1><Link className="primary-button" href="/resume">กรอกยอดของเดือนนี้</Link></section></AppShell>;
   if (!view) return <AppShell><section className="page-loading"><div className="skeleton skeleton-summary" /><div className="skeleton skeleton-card" /></section></AppShell>;
-  return <AppShell>{error ? <FeedbackBanner tone="warning" onDismiss={() => setError(null)}>{error}</FeedbackBanner> : null}<div className="page-heading"><div><p className="eyebrow">FINANCIAL BOUNDARY เดียว</p><h1>เดือนของคุณ</h1></div><Link className="secondary-button" href="/history">ดูประวัติ</Link></div><MonthSummary view={view} /><MonthTimeline view={view} onIncome={() => setDialog("income")} onSnapshot={() => setDialog("snapshot")} onEnding={() => setDialog("ending")} onClose={() => setDialog("close")} /><ExpenseChips view={view} onChange={setView} /><ExpenseSetupManager view={view} onChange={setView} />
+  return <AppShell>{error ? <FeedbackBanner tone="warning" onDismiss={() => setError(null)}>{error}</FeedbackBanner> : null}<div className="page-heading"><div><p className="eyebrow">FINANCIAL BOUNDARY เดียว</p><h1>เดือนของคุณ</h1></div><Link className="secondary-button" href="/history">ดูประวัติ</Link></div><MonthSummary view={view} /><MonthTimeline view={view} onIncome={() => setDialog("income")} onSnapshot={() => setDialog("snapshot")} onEnding={() => setDialog("ending")} onClose={() => setDialog("close")} /><ExpenseChips view={view} onChange={setView} onSessionExpired={expireSession} /><ExpenseSetupManager view={view} onChange={setView} onSessionExpired={expireSession} />
     {dialog === "income" ? <BalanceDialog title="แก้รายรับ" initialValue={view.summary.income ?? ""} onClose={() => setDialog(null)} onSubmit={(amount) => update(() => api.income(view.month, amount, view.revision))} /> : null}
     {dialog === "ending" ? <BalanceDialog title="บันทึกยอดปลาย" initialValue={view.summary.endingBalance ?? ""} onClose={() => setDialog(null)} onSubmit={(amount) => update(() => api.endingBalance(view.month, amount, view.revision))} /> : null}
     {dialog === "snapshot" ? <BalanceDialog title="บันทึก Snapshot" dateLabel="วันที่เห็นยอด" onClose={() => setDialog(null)} onSubmit={(amount, date) => update(() => api.snapshot(view.month, date ?? "", amount, view.revision))} /> : null}

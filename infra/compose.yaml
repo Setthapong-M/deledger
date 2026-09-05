@@ -42,6 +42,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "80"
+      DELEDGER_ENV: ${DELEDGER_ENV:-qas}
       APP_ORIGIN: http://deledger.internal
       BUSINESS_TIME_ZONE: Asia/Bangkok
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}

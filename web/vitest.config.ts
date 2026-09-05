@@ -16,7 +16,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
-          include: ["tests/domain/**/*.test.ts", "tests/components/**/*.test.tsx"],
+          include: ["tests/domain/**/*.test.ts", "tests/components/**/*.test.tsx", "tests/auth/**/*.unit.test.ts"],
           environment: "jsdom",
           setupFiles: ["src/test/setup.ts"],
           fileParallelism: false,

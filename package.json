@@ -8,6 +8,8 @@
   },
   "scripts": {
     "dev": "pnpm --dir web dev",
+    "dev:local": "bash scripts/dev-local.sh",
+    "seed:local": "node scripts/seed-local.mjs",
     "build": "pnpm --dir web build",
     "lint": "pnpm --dir web lint",
     "typecheck": "pnpm --dir web typecheck",

@@ -5,6 +5,7 @@ import { createJwksTestServer, type JwksTestServer } from "@/test/jwks-server";
 import { jsonRequest, responseJson } from "@/test/api-harness";
 import { POST as onboarding } from "@/app/api/onboarding/route";
 import { GET as bootstrap } from "@/app/api/bootstrap/route";
+import { GET as profile, PATCH as patchProfile } from "@/app/api/profile/route";
 import { PUT as income } from "@/app/api/months/[month]/income/route";
 import { DELETE as deleteDetail } from "@/app/api/months/[month]/details/[setupItemId]/route";
 
@@ -54,6 +55,38 @@ describe("JSON API contracts", () => {
     expect(unknownField.status).toBe(400);
     const noJson = await onboarding(new Request("http://deledger.internal/api/onboarding", { method: "POST", headers: { origin: "http://deledger.internal", "Cf-Access-Jwt-Assertion": await token() }, body: "{}" }));
     expect(noJson.status).toBe(400);
+  });
+
+  it("uses the QAS Cloudflare identity for profile access and keeps contacts read-only", async () => {
+    await admin.query("TRUNCATE local_session, monthly_expense_detail, monthly_recurring_expense, balance_snapshot, reporting_month, user_archive_period, user_identity_phone, user_identity_email, app_user CASCADE");
+    await admin.query("INSERT INTO app_user (id) VALUES ($1)", [ownerA]);
+    await admin.query("INSERT INTO user_identity_email (normalized_email, owner_id) VALUES ('qas-profile@example.com', $1)", [ownerA]);
+    const qasToken = await token("qas-profile@example.com");
+
+    const initial = await profile(jsonRequest("http://deledger.internal/api/profile", { token: qasToken }));
+    expect(initial.status).toBe(200);
+    expect(await responseJson(initial)).toEqual({ data: { email: "qas-profile@example.com", phone: null, dateOfBirth: null } });
+
+    const contactAttempt = await patchProfile(jsonRequest("http://deledger.internal/api/profile", {
+      method: "PATCH",
+      token: qasToken,
+      body: { phone: "0812345678" },
+    }));
+    expect(contactAttempt.status).toBe(403);
+    expect((await responseJson<{ error: { code: string; field: string | null } }>(contactAttempt)).error).toMatchObject({ code: "PROFILE_CONTACT_READ_ONLY", field: null });
+
+    const birthday = await patchProfile(jsonRequest("http://deledger.internal/api/profile", {
+      method: "PATCH",
+      token: qasToken,
+      body: { dateOfBirth: "1990-01-02" },
+    }));
+    expect(birthday.status).toBe(200);
+    expect((await responseJson<{ data: { email: string; phone: string | null; dateOfBirth: string } }>(birthday)).data).toEqual({
+      email: "qas-profile@example.com",
+      phone: null,
+      dateOfBirth: "1990-01-02",
+    });
+    expect((await admin.query("SELECT count(*)::int AS count FROM user_identity_phone WHERE owner_id = $1", [ownerA])).rows[0]?.count).toBe(0);
   });
 
   it("returns a complete Month View and current view on stale writes", async () => {

@@ -2,7 +2,8 @@ import type { PoolClient } from "pg";
 import { pool } from "./pool";
 import { setTransactionOwner } from "./rls";
 import { verifyAccessJwt, type AccessJwtConfig } from "../auth/access-jwt";
-import { bindIdentity, getBoundUser } from "../auth/identity";
+import { bindIdentity, bindLocalOwner, getBoundUser } from "../auth/identity";
+import { readLocalSessionToken, resolveLocalSession } from "../auth/local";
 import { DomainError } from "../domain/errors";
 import { logOperation } from "../logging";
 
@@ -44,11 +45,12 @@ export async function withClient<T>(operation: (client: PoolClient) => Promise<T
 export async function withUserTransaction<T>(
   request: Request,
   requestId: string,
-  config: AccessJwtConfig,
+  config: AccessJwtConfig & { mode?: "qas" } | { mode: "local" },
   operation: UserTransaction<T>,
 ): Promise<T> {
   const startedAt = performance.now();
-  const identity = await verifyAccessJwt(request, config).catch((error: unknown) => {
+  const local = config.mode === "local";
+  const identity = local ? null : await verifyAccessJwt(request, config).catch((error: unknown) => {
     const code = error instanceof Error && error.message === "ACCESS_TOKEN_MISSING" ? "ACCESS_TOKEN_MISSING" : "ACCESS_TOKEN_INVALID";
     throw new DomainError(code, code === "ACCESS_TOKEN_MISSING" ? "ต้องเข้าสู่ระบบก่อน" : "โทเคนไม่ถูกต้อง");
   });
@@ -56,8 +58,19 @@ export async function withUserTransaction<T>(
   let boundOwnerId: string | undefined;
   try {
     await client.query("BEGIN");
-    const resolved = await bindIdentity(client, identity.email);
-    await setTransactionOwner(client, resolved.ownerId);
+    let resolved;
+    if (local) {
+      const token = readLocalSessionToken(request);
+      if (!token) throw new DomainError("SESSION_INVALID", "ต้องเข้าสู่ระบบก่อน");
+      const session = await resolveLocalSession(client, token);
+      if (session.state === "archived") throw new DomainError("USER_ARCHIVED", "บัญชีนี้ถูกพักใช้งาน");
+      if (session.ownerId === null || session.state !== "active") throw new DomainError("SESSION_INVALID", "เซสชันหมดอายุหรือไม่ถูกต้อง");
+      await setTransactionOwner(client, session.ownerId);
+      resolved = await bindLocalOwner(client, session.ownerId);
+    } else {
+      resolved = await bindIdentity(client, identity!.email);
+      await setTransactionOwner(client, resolved.ownerId);
+    }
     const bound = await getBoundUser(client, resolved);
     boundOwnerId = bound.ownerId;
     await client.query("SELECT public.catch_up_current_owner_reporting_months()");
