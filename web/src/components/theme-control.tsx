@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 type Preference = "system" | "light" | "dark";
 
@@ -8,7 +8,12 @@ function systemIsDark(): boolean {
   return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
 export function ThemeControl() {
+  const hydrated = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
   const [preference, setPreference] = useState<Preference>(() => {
     if (typeof document === "undefined") return "system";
     const theme = document.documentElement.dataset.theme;
@@ -35,8 +40,9 @@ export function ThemeControl() {
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, []);
 
-  const resolvedDark = preference === "dark" || (preference === "system" && systemDark);
-  const label = preference === "system" ? `ตามระบบ (${resolvedDark ? "มืด" : "สว่าง"})` : preference === "dark" ? "มืด" : "สว่าง";
+  const displayedPreference = hydrated ? preference : "system";
+  const resolvedDark = hydrated && (preference === "dark" || (preference === "system" && systemDark));
+  const label = displayedPreference === "system" ? `ตามระบบ (${resolvedDark ? "มืด" : "สว่าง"})` : displayedPreference === "dark" ? "มืด" : "สว่าง";
 
   function choose(next: Preference) {
     setPreference(next);
