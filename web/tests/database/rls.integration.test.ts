@@ -11,8 +11,9 @@ async function setOwner(ownerId: string | null): Promise<void> {
 
 describe("PostgreSQL row-level isolation", () => {
   beforeAll(async () => {
-    await admin.query("TRUNCATE monthly_expense_detail, monthly_recurring_expense, balance_snapshot, reporting_month, user_archive_period, user_identity_email, app_user CASCADE");
+    await admin.query("TRUNCATE monthly_expense_detail, monthly_recurring_expense, balance_snapshot, reporting_month, user_archive_period, user_identity_phone, user_identity_email, app_user CASCADE");
     await admin.query("INSERT INTO app_user (id) VALUES ($1), ($2)", [ownerA, ownerB]);
+    await admin.query("INSERT INTO user_identity_phone (normalized_phone, owner_id) VALUES ('+66810000001', $1)", [ownerB]);
     await admin.query("INSERT INTO reporting_month (owner_id, month_start, tracked_from, opening_source, opening_balance_input) VALUES ($1, $3, $3, 'supplied', '20000.00'), ($2, $3, $3, 'supplied', '10000.00')", [ownerA, ownerB, monthA]);
     await admin.query("INSERT INTO monthly_recurring_expense (owner_id, month_start, position, name, kind, fixed_amount) VALUES ($1, $3, 1, 'A rent', 'fixed', '6000.00'), ($2, $3, 1, 'B rent', 'fixed', '7000.00')", [ownerA, ownerB, monthA]);
     await admin.query("INSERT INTO monthly_expense_detail (owner_id, month_start, setup_item_id, confirmed_name, confirmed_kind, confirmed_amount) SELECT owner_id, month_start, id, name, kind, fixed_amount FROM monthly_recurring_expense WHERE owner_id = $1", [ownerB]);
@@ -27,7 +28,7 @@ describe("PostgreSQL row-level isolation", () => {
     await web.query("BEGIN");
     try {
       await setOwner(ownerA);
-      const hidden = await web.query("SELECT id FROM app_user WHERE id = $1 UNION ALL SELECT owner_id FROM reporting_month WHERE owner_id = $1 UNION ALL SELECT owner_id FROM balance_snapshot WHERE owner_id = $1 UNION ALL SELECT owner_id FROM monthly_recurring_expense WHERE owner_id = $1 UNION ALL SELECT owner_id FROM monthly_expense_detail WHERE owner_id = $1", [ownerB]);
+      const hidden = await web.query("SELECT id FROM app_user WHERE id = $1 UNION ALL SELECT owner_id FROM user_identity_phone WHERE owner_id = $1 UNION ALL SELECT owner_id FROM reporting_month WHERE owner_id = $1 UNION ALL SELECT owner_id FROM balance_snapshot WHERE owner_id = $1 UNION ALL SELECT owner_id FROM monthly_recurring_expense WHERE owner_id = $1 UNION ALL SELECT owner_id FROM monthly_expense_detail WHERE owner_id = $1", [ownerB]);
       expect(hidden.rows).toHaveLength(0);
 
       expect((await web.query("UPDATE app_user SET resume_required_at = clock_timestamp() WHERE id = $1", [ownerB])).rowCount).toBe(0);
@@ -37,6 +38,7 @@ describe("PostgreSQL row-level isolation", () => {
 
       await expect(web.query("INSERT INTO reporting_month (owner_id, month_start, tracked_from, opening_source, opening_balance_input) VALUES ($1, '2026-09-01', '2026-09-01', 'supplied', '1.00')", [ownerB])).rejects.toMatchObject({ code: "42501" });
       await expect(web.query("INSERT INTO monthly_recurring_expense (owner_id, month_start, position, name, kind, fixed_amount) VALUES ($1, $2, 2, 'nope', 'fixed', '1.00')", [ownerB, monthA])).rejects.toMatchObject({ code: "42501" });
+      await expect(web.query("INSERT INTO user_identity_phone (normalized_phone, owner_id) VALUES ('+66810000002', $1)", [ownerB])).rejects.toMatchObject({ code: "42501" });
     } finally {
       await web.query("ROLLBACK");
     }
@@ -47,6 +49,7 @@ describe("PostgreSQL row-level isolation", () => {
     try {
       await setOwner(null);
       expect((await web.query("SELECT id FROM app_user")).rows).toHaveLength(0);
+      expect((await web.query("SELECT normalized_phone FROM user_identity_phone")).rows).toHaveLength(0);
       expect((await web.query("SELECT owner_id FROM reporting_month")).rows).toHaveLength(0);
       await expect(web.query("INSERT INTO balance_snapshot (owner_id, month_start, observed_on, amount) VALUES ($1, $2, $2, '1.00')", [ownerB, monthA])).rejects.toMatchObject({ code: "42501" });
     } finally {

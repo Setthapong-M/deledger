@@ -16,7 +16,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
-          include: ["tests/domain/**/*.test.ts", "tests/components/**/*.test.tsx"],
+          include: ["tests/domain/**/*.test.ts", "tests/components/**/*.test.tsx", "tests/auth/**/*.unit.test.ts"],
           environment: "jsdom",
           setupFiles: ["src/test/setup.ts"],
           fileParallelism: false,
@@ -28,7 +28,7 @@ export default defineConfig({
           name: "integration",
           include: ["tests/database/**/*.integration.test.ts", "tests/auth/**/*.integration.test.ts", "tests/services/**/*.integration.test.ts", "tests/api/**/*.integration.test.ts"],
           environment: "node",
-          setupFiles: ["src/test/setup.ts"],
+          setupFiles: ["src/test/setup.ts", "src/test/integration-setup.ts"],
           sequence: { concurrent: false, setupFiles: "list" },
           fileParallelism: false,
         },

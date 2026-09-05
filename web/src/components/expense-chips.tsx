@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { api, ApiClientError, type MonthView } from "@/lib/api-client";
+import { api, ApiClientError, isAuthenticationError, type MonthView } from "@/lib/api-client";
 import { Dialog } from "./dialog";
 import { MoneyField } from "./money-field";
 import { FeedbackBanner } from "./feedback-banner";
 
-export function ExpenseChips({ view, onChange }: { view: MonthView; onChange: (view: MonthView) => void }) {
+export function ExpenseChips({ view, onChange, onSessionExpired = () => window.location.assign("/login") }: { view: MonthView; onChange: (view: MonthView) => void; onSessionExpired?: () => void }) {
   const [selected, setSelected] = useState<MonthView["setup"][number] | null>(null);
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -14,11 +14,11 @@ export function ExpenseChips({ view, onChange }: { view: MonthView; onChange: (v
   const items = [...view.setup].sort((left, right) => left.position - right.position);
   async function save(nextAmount?: string) {
     if (!selected) return;
-    try { const next = selected.detail ? await api.confirmDetail(view.month, selected.id, nextAmount, view.revision) : await api.confirmDetail(view.month, selected.id, selected.kind === "variable" ? nextAmount : undefined, view.revision); onChange(next); setSelected(null); setError(null); } catch (reason) { if (reason instanceof ApiClientError && reason.current) onChange(reason.current); setError(reason instanceof Error ? reason.message : "บันทึกไม่สำเร็จ"); }
+    try { const next = selected.detail ? await api.confirmDetail(view.month, selected.id, nextAmount, view.revision) : await api.confirmDetail(view.month, selected.id, selected.kind === "variable" ? nextAmount : undefined, view.revision); onChange(next); setSelected(null); setError(null); } catch (reason) { if (isAuthenticationError(reason)) { setSelected(null); setError(null); setMessage(null); onSessionExpired(); return; } if (reason instanceof ApiClientError && reason.current) onChange(reason.current); setError(reason instanceof Error ? reason.message : "บันทึกไม่สำเร็จ"); }
   }
   async function cancel() {
     if (!selected) return;
-    try { onChange(await api.cancelDetail(view.month, selected.id, view.revision)); setSelected(null); } catch (reason) { if (reason instanceof ApiClientError && reason.current) onChange(reason.current); setMessage(reason instanceof Error ? reason.message : "ยกเลิกไม่สำเร็จ"); setSelected(null); }
+    try { onChange(await api.cancelDetail(view.month, selected.id, view.revision)); setSelected(null); } catch (reason) { if (isAuthenticationError(reason)) { setSelected(null); setError(null); setMessage(null); onSessionExpired(); return; } if (reason instanceof ApiClientError && reason.current) onChange(reason.current); setMessage(reason instanceof Error ? reason.message : "ยกเลิกไม่สำเร็จ"); setSelected(null); }
   }
   function choose(item: MonthView["setup"][number]) {
     if (!view.allowedActions.confirmDetails) return;

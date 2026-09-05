@@ -4,7 +4,7 @@ import { resolveCurrentIdentity, getCurrentUser } from "../repositories/users";
 
 export type BoundIdentity = {
   ownerId: string;
-  email: string;
+  email: string | null;
 };
 
 export async function bindIdentity(client: PoolClient, email: string): Promise<BoundIdentity> {
@@ -16,6 +16,13 @@ export async function bindIdentity(client: PoolClient, email: string): Promise<B
     throw new DomainError("USER_ARCHIVED", "บัญชีนี้ถูกพักใช้งาน");
   }
   return { ownerId: identity.ownerId, email };
+}
+
+export async function bindLocalOwner(client: PoolClient, ownerId: string): Promise<BoundIdentity> {
+  const user = await getCurrentUser(client, ownerId);
+  const archived = await client.query("SELECT 1 FROM public.user_archive_period WHERE owner_id = $1 AND restored_at IS NULL", [ownerId]);
+  if (archived.rowCount !== 0) throw new DomainError("USER_ARCHIVED", "บัญชีนี้ถูกพักใช้งาน");
+  return { ownerId: user.id, email: null };
 }
 
 export async function getBoundUser(client: PoolClient, identity: BoundIdentity): Promise<BoundIdentity & { resumeRequiredAt: string | null }> {

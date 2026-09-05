@@ -24,7 +24,7 @@ export default defineConfig({
     extraHTTPHeaders: { "x-deledger-test": "1" },
   },
   webServer: {
-    command: "pnpm dev --hostname 127.0.0.1 --port 3014",
+    command: "DELEDGER_ENV=local APP_ORIGIN=http://127.0.0.1:3014 BUSINESS_TIME_ZONE=Asia/Bangkok DATABASE_URL=postgresql://deledger_web:deledger_web@127.0.0.1:55433/deledger_local pnpm dev --hostname 127.0.0.1 --port 3014",
     url: "http://127.0.0.1:3014",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

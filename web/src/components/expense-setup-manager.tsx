@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { api, ApiClientError, type MonthView } from "@/lib/api-client";
+import { api, ApiClientError, isAuthenticationError, type MonthView } from "@/lib/api-client";
 import { ExpenseSetupDialog, type SetupDraft } from "./expense-setup-dialog";
 import { FeedbackBanner } from "./feedback-banner";
 
-export function ExpenseSetupManager({ view, onChange }: { view: MonthView; onChange: (view: MonthView) => void }) {
+export function ExpenseSetupManager({ view, onChange, onSessionExpired = () => window.location.assign("/login") }: { view: MonthView; onChange: (view: MonthView) => void; onSessionExpired?: () => void }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -13,6 +13,7 @@ export function ExpenseSetupManager({ view, onChange }: { view: MonthView; onCha
 
   async function run(action: () => Promise<MonthView>) {
     try { onChange(await action()); setMessage(null); } catch (reason) {
+      if (isAuthenticationError(reason)) { setEditing(null); setAdding(false); setDragging(null); setMessage(null); onSessionExpired(); return; }
       if (reason instanceof ApiClientError && reason.current) onChange(reason.current);
       setMessage(reason instanceof Error ? reason.message : "บันทึกไม่สำเร็จ");
     }

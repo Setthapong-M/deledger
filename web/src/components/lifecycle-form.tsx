@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { api, ApiClientError, type MonthView } from "@/lib/api-client";
+import { api, ApiClientError, isAuthenticationError, type MonthView } from "@/lib/api-client";
 import { MoneyField } from "./money-field";
 import { FeedbackBanner } from "./feedback-banner";
 
@@ -21,6 +21,7 @@ export function LifecycleForm({ mode, onComplete }: { mode: "start" | "resume"; 
       onComplete?.(month);
       if (!onComplete) window.location.assign("/month");
     } catch (reason) {
+      if (isAuthenticationError(reason)) { window.location.assign("/login"); return; }
       setError(reason instanceof ApiClientError ? reason.message : "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
     } finally {
       setBusy(false);

@@ -146,7 +146,7 @@ describe("private deployment boundary", () => {
         { cwd: repository, encoding: "utf8", env: environment },
       );
       expect(migrationHead.status, migrationHead.stderr).toBe(0);
-      expect(migrationHead.stdout.trim()).toBe("202608310007_restore_boundary");
+      expect(migrationHead.stdout.trim()).toBe("202609050002_local_identity_constraints");
     } finally {
       spawnSync("docker", [...compose, "down", "--volumes", "--remove-orphans"], {
         cwd: repository,

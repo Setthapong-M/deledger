@@ -48,6 +48,8 @@ export type MonthView = {
 };
 
 export type Bootstrap = { state: LifecycleState; month: MonthView | null };
+export type AuthMode = { environment: "local" | "qas" | "prod" };
+export type UserProfile = { email: string | null; phone: string | null; dateOfBirth: string | null };
 export type HistoryEntry =
   | { kind: "month"; id: string; view: MonthView }
   | { kind: "tracking_gap"; id: string; archivedAt: string; restoredAt: string | null };
@@ -68,6 +70,10 @@ export class ApiClientError extends Error {
   }
 }
 
+export function isAuthenticationError(error: unknown): error is ApiClientError {
+  return error instanceof ApiClientError && (error.status === 401 || error.code === "ACCESS_TOKEN_MISSING" || error.code === "SESSION_INVALID");
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -82,6 +88,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  authMode: () => request<AuthMode>("/api/auth/mode"),
+  login: (identifier: string) => request<{ authenticated: true }>("/api/auth/login", { method: "POST", body: JSON.stringify({ identifier }) }),
+  logout: () => request<{ authenticated: false }>("/api/auth/logout", { method: "POST", body: JSON.stringify({}) }),
+  profile: () => request<UserProfile>("/api/profile"),
+  updateProfile: (payload: { email?: string | null; phone?: string | null; dateOfBirth?: string | null }) => request<UserProfile>("/api/profile", { method: "PATCH", body: JSON.stringify(payload) }),
   bootstrap: () => request<Bootstrap>("/api/bootstrap"),
   current: () => request<Bootstrap>("/api/months/current"),
   month: (month: string) => request<MonthView>(`/api/months/${encodeURIComponent(month)}`),

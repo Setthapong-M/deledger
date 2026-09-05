@@ -22,7 +22,10 @@ export async function handleUserRoute<T>(request: Request, options: {
     }
     if (options.method === "DELETE" && request.headers.get("origin") !== config.APP_ORIGIN) return failure({ code: "INVALID_INPUT", message: "แหล่งที่มาของคำขอไม่ถูกต้อง", field: "origin", current: null }, 400);
     const body = options.body ? await options.body(request) : undefined as T;
-    const data = await withUserTransaction(request, requestId, { teamDomain: config.CLOUDFLARE_TEAM_DOMAIN, audience: config.CLOUDFLARE_ACCESS_AUD }, (context) => options.operation(context, body, { requestId, config }));
+    const authConfig = config.environment === "local"
+      ? { mode: "local" as const }
+      : { mode: "qas" as const, teamDomain: config.CLOUDFLARE_TEAM_DOMAIN!, audience: config.CLOUDFLARE_ACCESS_AUD! };
+    const data = await withUserTransaction(request, requestId, authConfig, (context) => options.operation(context, body, { requestId, config }));
     return success(data);
   } catch (error) {
     if (error instanceof DomainError) return domainFailure(error);
@@ -38,6 +41,16 @@ export async function parseJson<T>(request: Request, schema: { parse: (value: un
   } catch {
     throw new DomainError("INVALID_INPUT", "รูปแบบข้อมูลไม่ถูกต้อง");
   }
+}
+
+export function localConfigOrFailure(request: Request, method: "POST" | "PATCH"): AppConfig {
+  const config = safeConfig();
+  if (config.environment !== "local") throw new DomainError("LOCAL_AUTH_DISABLED", "ฟังก์ชันนี้เปิดเฉพาะ local environment");
+  if (method === "POST" || method === "PATCH") {
+    if (!isJsonRequest(request)) throw new DomainError("INVALID_INPUT", "ต้องส่งข้อมูล JSON");
+    if (request.headers.get("origin") !== config.APP_ORIGIN) throw new DomainError("INVALID_INPUT", "แหล่งที่มาของคำขอไม่ถูกต้อง", "origin");
+  }
+  return config;
 }
 
 export function safeConfig(): AppConfig {

@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 test("theme preference, keyboard focus and accessibility remain available", async ({ page }) => {
+  await page.route("**/api/bootstrap", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { state: "onboarding_required", month: null } }) }));
   await page.goto("/start");
   await page.evaluate(() => {
     const probe = document.createElement("button");
