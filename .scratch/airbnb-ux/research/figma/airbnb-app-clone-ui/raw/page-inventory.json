@@ -1,0 +1,103 @@
+{
+  "schemaVersion": "1.0",
+  "source": {
+    "fileKey": "LtZClzhjBrIfy0imWJnlEg",
+    "url": "https://www.figma.com/design/LtZClzhjBrIfy0imWJnlEg/Airbnb-App-Clone-UI?t=JrZlXDk9KDBHTpDC-1",
+    "retrievedAt": "2026-09-05"
+  },
+  "pages": [
+    {
+      "id": "0:1",
+      "name": "🐑 Cover",
+      "status": "complete",
+      "topLevel": [{"id":"2:36","name":"cover","type":"FRAME","x":-960,"y":-480,"width":1920,"height":960,"childCount":5}],
+      "counts": {"FRAME":48,"INSTANCE":45,"RECTANGLE":19,"GROUP":12,"VECTOR":67,"BOOLEAN_OPERATION":18,"ELLIPSE":31,"TEXT":32},
+      "evidence": {"screenshot":"screens/0-1_cover-page.png","screenshotStatus":"complete"}
+    },
+    {
+      "id": "5:23",
+      "name": "📱 Mockup",
+      "status": "complete",
+      "topLevel": [{"id":"49:17861","name":"Cover Mockup","type":"SECTION","x":963,"y":-1844,"width":2402,"height":1209,"childCount":5}],
+      "counts": {"SECTION":1,"INSTANCE":79,"RECTANGLE":34,"FRAME":78,"TEXT":53,"GROUP":17,"VECTOR":96,"BOOLEAN_OPERATION":31,"COMPONENT":4,"ELLIPSE":60},
+      "evidence": {"screenshot":"screens/5-23_mockup-page.png","screenshotStatus":"complete"}
+    },
+    {
+      "id": "2:13",
+      "name": "➕ Icons",
+      "status": "complete",
+      "topLevel": [{"id":"45:14021","name":"Icons","type":"SECTION","x":0,"y":0,"width":2768,"height":603,"childCount":17}],
+      "counts": {"SECTION":1,"INSTANCE":1,"RECTANGLE":21,"FRAME":4,"TEXT":1,"GROUP":12,"VECTOR":262,"BOOLEAN_OPERATION":105,"COMPONENT_SET":14,"COMPONENT":139,"ELLIPSE":105},
+      "evidence": {"screenshot":"screens/45-14021_icons-page.png","screenshotStatus":"complete"}
+    },
+    {
+      "id": "2:15",
+      "name": "💠 Components",
+      "status": "complete",
+      "topLevel": [
+        {"id":"43:13862","name":"Status Bars","type":"SECTION","x":-3182,"y":-2092,"width":1392,"height":1896,"childCount":3},
+        {"id":"43:13863","name":"Keyboards","type":"SECTION","x":-1390,"y":-2092,"width":1917,"height":2777,"childCount":4},
+        {"id":"43:14162","name":"Input","type":"SECTION","x":7007,"y":-2092,"width":3663,"height":1573,"childCount":13},
+        {"id":"43:15112","name":"Cards","type":"SECTION","x":11070,"y":-2092,"width":2995,"height":829},
+        {"id":"45:14040","name":"Toggles","type":"SECTION","x":23089,"y":-2092,"width":479,"height":337,"childCount":2},
+        {"id":"45:14059","name":"Toast","type":"SECTION","x":23968,"y":-2092,"width":656,"height":337,"childCount":3},
+        {"id":"43:15485","name":"Date Picker","type":"SECTION","x":27772,"y":-2092,"width":874,"height":821,"childCount":6},
+        {"id":"43:15542","name":"Tabs","type":"SECTION","x":19704,"y":-2092,"width":871,"height":829,"childCount":4},
+        {"id":"43:15561","name":"Links","type":"SECTION","x":20975,"y":-2092,"width":871,"height":337,"childCount":4},
+        {"id":"43:15466","name":"Cells","type":"SECTION","x":14465,"y":-2092,"width":1337,"height":829,"childCount":4},
+        {"id":"43:15404","name":"Filter","type":"SECTION","x":25024,"y":-2092,"width":2348,"height":1815,"childCount":6},
+        {"id":"43:15385","name":"Search","type":"SECTION","x":16202,"y":-2092,"width":1707,"height":647,"childCount":6},
+        {"id":"43:15366","name":"Checkbox","type":"SECTION","x":22246,"y":-2092,"width":443,"height":337,"childCount":2},
+        {"id":"43:15441","name":"Title Bar","type":"SECTION","x":927,"y":-2092,"width":733,"height":829,"childCount":2},
+        {"id":"43:15347","name":"Modals","type":"SECTION","x":18309,"y":-2092,"width":995,"height":829,"childCount":3},
+        {"id":"43:15328","name":"Wheel Picker","type":"SECTION","x":29046,"y":-2092,"width":646,"height":625,"childCount":2},
+        {"id":"43:15309","name":"Bottom Bars","type":"SECTION","x":2060,"y":-2092,"width":1152,"height":1664,"childCount":5},
+        {"id":"43:15290","name":"Buttons","type":"SECTION","x":3612,"y":-2092,"width":2995,"height":1337,"childCount":9}
+      ],
+      "counts": {"SECTION":18,"COMPONENT_SET":42,"COMPONENT":284,"GROUP":100,"VECTOR":1934,"INSTANCE":812,"TEXT":676,"BOOLEAN_OPERATION":191,"FRAME":497,"ELLIPSE":201,"RECTANGLE":256},
+      "evidence": {"screenshot":"screens/2-15_components-page.png","screenshotStatus":"complete_but_scaled_from_32874x2777"}
+    },
+    {
+      "id": "2:16",
+      "name": "      ↳ iOS v.1.0",
+      "status": "complete",
+      "topLevel": [
+        {"id":"45:14609","name":"Launch Screen - 1","type":"SECTION","x":-5048,"y":-18564,"width":614,"height":1169,"childCount":2},
+        {"id":"45:14631","name":"Sign Up","type":"SECTION","x":-5048,"y":-17043,"width":3019,"height":1240,"childCount":6},
+        {"id":"46:14133","name":"Account Setup","type":"SECTION","x":-5048,"y":-15451,"width":3019,"height":1240,"childCount":6},
+        {"id":"46:22614","name":"Wishlists","type":"SECTION","x":-5048,"y":3910,"width":3019,"height":1240,"childCount":6},
+        {"id":"46:23798","name":"Inbox","type":"SECTION","x":-5048,"y":10862,"width":3019,"height":1161,"childCount":6},
+        {"id":"46:24393","name":"Profile","type":"SECTION","x":-5048,"y":12390,"width":8997,"height":1161,"childCount":16},
+        {"id":"46:23245","name":"Trips","type":"SECTION","x":-5048,"y":5653,"width":7275,"height":4706,"childCount":13},
+        {"id":"46:24887","name":"Experiences","type":"SECTION","x":-5048,"y":-1895,"width":4883,"height":5340,"childCount":9},
+        {"id":"46:14780","name":"Onboarding","type":"SECTION","x":-5048,"y":-13958,"width":1312,"height":1240,"childCount":3},
+        {"id":"46:15384","name":"Explore","type":"SECTION","x":-5048,"y":-12497,"width":17283,"height":1240,"childCount":32},
+        {"id":"46:15406","name":"Listing Details","type":"SECTION","x":-5048,"y":-10734,"width":6647,"height":4859,"childCount":12},
+        {"id":"46:20319","name":"Book a Listing","type":"SECTION","x":-5048,"y":-5253,"width":14984,"height":2736,"childCount":26}
+      ],
+      "counts": {"SECTION":12,"FRAME":4216,"INSTANCE":3638,"RECTANGLE":1295,"GROUP":582,"VECTOR":3191,"TEXT":3377,"BOOLEAN_OPERATION":752,"ELLIPSE":994,"COMPONENT":18},
+      "evidence": {"screenshot":"screens/2-16_ios-page.png","screenshotStatus":"complete_but_scaled_from_17283x32115"}
+    },
+    {
+      "id": "39:29883",
+      "name": "🏗️ Design System Components",
+      "status": "complete",
+      "topLevel": [
+        {"id":"39:30041","name":"design system","type":"FRAME","x":-724,"y":-705,"width":1448,"height":968,"childCount":6},
+        {"id":"40:25241","name":"section heading","type":"COMPONENT","x":-724,"y":-987,"width":1598,"height":170,"childCount":2},
+        {"id":"34:24295","name":"IMG_0350","type":"RECTANGLE","x":-5105,"y":19872,"width":390,"height":844.48},
+        {"id":"37:27716","name":"Airbnb iOS 248 1","type":"RECTANGLE","x":-3935,"y":19872,"width":390,"height":844.48},
+        {"id":"37:27717","name":"Airbnb iOS 249 1","type":"RECTANGLE","x":-145,"y":19900,"width":390,"height":844.48},
+        {"id":"37:27718","name":"Airbnb iOS 250 1","type":"RECTANGLE","x":-2793,"y":19872,"width":390,"height":844.48},
+        {"id":"37:27719","name":"IMG_0369","type":"RECTANGLE","x":-1355,"y":19900,"width":390,"height":844.48}
+      ],
+      "counts": {"FRAME":5,"INSTANCE":2,"TEXT":7,"LINE":1,"COMPONENT":2,"RECTANGLE":9,"GROUP":1,"VECTOR":8,"BOOLEAN_OPERATION":1},
+      "evidence": {"screenshot":null,"screenshotStatus":"blocked_by_rate_limit"}
+    }
+  ],
+  "toolLimitations": [
+    "Counts and top-level node inventory came from read-only Figma Plugin API scripts.",
+    "The tool returned a rate-limit error after five screenshot exports; detailed component properties, variables, styles, prototype reactions and additional screen exports were not retrievable in this run.",
+    "This JSON is a normalized checkpoint, not an unmodified Figma API dump. The exact source URL and node IDs preserve provenance."
+  ]
+}

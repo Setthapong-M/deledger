@@ -9,7 +9,7 @@ test("local User logs in with one email-or-phone field", async ({ page }) => {
   await page.getByLabel("อีเมลหรือเบอร์โทร").fill("081-234-5678");
   await page.getByRole("button", { name: "ดำเนินการต่อ" }).click();
   await expect.poll(() => submitted).toBe("081-234-5678");
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/start$/);
 });
 
 test("profile shows contacts and saves local phone and optional birthday", async ({ page }) => {
