@@ -19,10 +19,10 @@ Reference: the ingested Airbnb clone/research in `.scratch/airbnb-ux/`. Layout c
 | `pnpm test:integration` | 43 tests passed |
 | `pnpm test:ops` | 14 tests passed |
 | `pnpm test:coverage` | 91 tests passed; configured coverage thresholds passed |
-| `pnpm test:e2e` | 56 tests passed across Chromium, Firefox, WebKit and mobile WebKit |
+| `pnpm test:e2e` | 68 tests passed across Chromium, Firefox, WebKit and mobile WebKit |
 | `git diff --check` | Passed |
 
-Configured coverage scope: statements 95.83%, branches 91.85%, functions 97.5%, lines 99.17%. This is the repository's configured coverage subset, not coverage of the whole UI.
+Configured coverage scope: statements 95.83%, branches 91.97%, functions 97.5%, lines 99.17%. This is the repository's configured coverage subset, not coverage of the whole UI.
 
 Browser coverage includes original auth/profile/onboarding/history journeys, light/dark axe checks, 320px no horizontal overflow, no editing without server permission, provisional labels, missing values, close review/cancel/Escape/focus restoration/request payload, separate Tracking Gap state, and bottom navigation clearance at the final action.
 
@@ -48,3 +48,28 @@ Human usability review is still required. Shared CSS affects multiple routes, so
 The generated `web/next-env.d.ts` started with dev-server type paths; the production build regenerated it to its tracked production type paths. It was not staged in the UI commit.
 
 PR: https://github.com/Setthapong-M/deledger/pull/6 (dev-uxui → main), opened for review without merging.
+
+## Tailwind CSS v4 refactor
+
+Migrated all component/page presentation from legacy CSS class selectors to Tailwind utilities. Build dependencies are pinned to tailwindcss/@tailwindcss/postcss 4.3.3 and postcss 8.5.28. `web/postcss.config.mjs` uses the v4 PostCSS plugin. `globals.css` now holds the Tailwind import, CSS-first semantic theme, responsive variants and base defaults; reusable primitive utility strings live in `web/src/components/ui-styles.ts`.
+
+The runtime theme cookie and system preference are unchanged. State styling uses static ARIA/data variants; the styling-only spelling `needs-information` prevents Tailwind from decoding the domain state's underscore into a space. The domain value remains `needs_information`. Responsive variants are registered tablet before mobile, preserving the original inclusive 900px/760px cascade.
+
+Final refactor validation: `pnpm qc`, `pnpm build`, unit 34, integration 43, operations 14, coverage 91 and E2E 68 tests passed. `docker build -f web/Dockerfile -t deledger-tailwind-review .` also passed, including the production Tailwind compilation. The image was built locally, not deployed. Coverage branches are now 91.97%; other reported coverage percentages are unchanged.
+
+Additional browser assertions cover selected-nav/reconciled colors, non-color distinction for needs-information/inconsistent states, and layout boundaries at 760/761/900/901px. The existing color probe now receives the same shared Tailwind utilities as the real primary button.
+
+Before/after screenshot comparison against commit 6944483, on the same machine with the same mocked API data:
+
+| Capture | Dimensions (both) | Changed pixels |
+| --- | --- | --- |
+| Desktop light | 1280 × 1473 | 0.0% |
+| Desktop dark | 1280 × 1473 | 0.0% |
+| Mobile light | 1170 × 6051 | 0.0% |
+| Mobile dark | 1170 × 6051 | 0.0% |
+
+These numeric comparisons cover the captured monthly page only and are not a substitute for usability review. The screenshot files above have been refreshed with the Tailwind rendering.
+
+Implementation references: [Next.js setup](https://tailwindcss.com/docs/installation/framework-guides/nextjs), [CSS-first themes](https://tailwindcss.com/docs/theme), [Preflight](https://tailwindcss.com/docs/preflight), [static source detection](https://tailwindcss.com/docs/detecting-classes-in-source-files).
+
+After restoring the final small-text defaults and close-dialog paragraph spacing, the affected UX/accessibility suites were rerun on all four browsers: 40 tests passed. The final lint/typecheck and production build also passed.

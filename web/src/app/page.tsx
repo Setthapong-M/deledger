@@ -1,5 +1,7 @@
 "use client";
 
+import { ui } from "@/components/ui-styles";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
@@ -13,5 +15,5 @@ export default function HomePage() {
     void api.bootstrap().then((state: Bootstrap) => { if (!active) return; router.replace(state.state === "onboarding_required" ? "/start" : state.state === "resume_required" ? "/resume" : "/month"); }).catch((reason) => { if (!active) return; if (isAuthenticationError(reason)) { router.replace("/login"); return; } setError(reason instanceof Error ? reason.message : "ระบบยังไม่พร้อม"); });
     return () => { active = false; };
   }, [router]);
-  return <AppShell><section className="card empty-state" aria-live="polite"><p className="eyebrow">DELEDGER PRIVATE BETA</p><h1>{error ? "เข้าถึงข้อมูลไม่ได้" : "กำลังตรวจสอบสถานะ…"}</h1><p>{error ?? "กำลังเตรียม Financial Boundary ของคุณ"}</p>{error ? <button className="primary-button" type="button" onClick={() => window.location.reload()}>ลองใหม่</button> : null}</section></AppShell>;
+  return <AppShell><section className={`${ui.card} ${ui.emptyState}`} aria-live="polite"><p className={ui.eyebrow}>DELEDGER PRIVATE BETA</p><h1>{error ? "เข้าถึงข้อมูลไม่ได้" : "กำลังตรวจสอบสถานะ…"}</h1><p>{error ?? "กำลังเตรียม Financial Boundary ของคุณ"}</p>{error ? <button className={ui.primaryButton} type="button" onClick={() => window.location.reload()}>ลองใหม่</button> : null}</section></AppShell>;
 }

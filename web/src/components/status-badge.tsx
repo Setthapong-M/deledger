@@ -1,3 +1,4 @@
+import { ui } from "@/components/ui-styles";
 import type { ReconciliationState } from "@/lib/api-client";
 
 export const statusText: Record<ReconciliationState, string> = {
@@ -16,10 +17,10 @@ const statusSymbol: Record<ReconciliationState, string> = {
 
 export function StatusBadge({ state, partial = false }: { state: ReconciliationState; partial?: boolean }) {
   return (
-    <span className={`status-badge status-${state}`}>
+    <span className={ui.statusBadge} data-state={state === "needs_information" ? "needs-information" : state}>
       <span aria-hidden="true">{statusSymbol[state]}</span>
       <span>{statusText[state]}</span>
-      {partial ? <span className="status-partial">· เริ่มกลางเดือน</span> : null}
+      {partial ? <span className="font-medium">· เริ่มกลางเดือน</span> : null}
     </span>
   );
 }

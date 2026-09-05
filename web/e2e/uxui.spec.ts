@@ -86,6 +86,9 @@ test("missing inputs remain empty and server permissions control actions at 320p
   await page.setViewportSize({ width: 320, height: 720 });
   await mockMonth(page, view);
   await expect(page.getByText("ยังมีข้อมูลไม่พอสำหรับคำนวณรายจ่าย")).toBeVisible();
+  const needsInformation = page.getByText("ข้อมูลไม่ครบ", { exact: true }).locator("..");
+  await expect(needsInformation).toHaveCSS("border-top-style", "dashed");
+  await expect(needsInformation).toHaveCSS("border-top-width", "2px");
   await expect(page.getByRole("button", { name: "แก้ไขรายรับ" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "เพิ่มรายการ" })).toBeDisabled();
   await expect(page.getByRole("button", { name: /^ค่าเช่า/ })).toBeDisabled();
@@ -124,4 +127,39 @@ test("mobile navigation stays reachable without covering the last action", async
   await navigation.getByRole("link", { name: "ประวัติ" }).click();
   await expect(page).toHaveURL(/\/history$/);
   await expect(navigation.getByRole("link", { name: "ประวัติ" })).toHaveAttribute("aria-current", "page");
+});
+
+test("selected navigation and reconciled badges retain the project colors on interaction", async ({ page }) => {
+  await page.context().addCookies([{ name: "deledger_theme", value: "light", url: "http://127.0.0.1:3014" }]);
+  const view = monthView();
+  view.reconciliation.state = "reconciled";
+  view.summary.endingBalance = "15000.00";
+  view.summary.monthlySpending = "35000.00";
+  view.summary.provisionalSpending = null;
+  view.summary.referenceKind = "ending_balance";
+  await mockMonth(page, view);
+  const selected = page.getByRole("navigation").getByRole("link", { name: "เดือนนี้" });
+  await selected.hover({ force: true });
+  await expect(selected).toHaveCSS("background-color", "rgb(181, 198, 156)");
+  const reconciled = page.getByText("ตรวจสอบแล้ว", { exact: true }).locator("..");
+  await expect(reconciled).toHaveCSS("background-color", "rgb(181, 198, 156)");
+  await expect(reconciled).toHaveCSS("color", "rgb(38, 38, 38)");
+});
+
+test("inconsistent months keep a distinct border without relying on color", async ({ page }) => {
+  const view = monthView();
+  view.reconciliation.state = "inconsistent";
+  await mockMonth(page, view);
+  const inconsistent = page.getByText("ยอดไม่สอดคล้อง", { exact: true }).locator("..");
+  await expect(inconsistent).toHaveCSS("border-top-style", "double");
+  await expect(inconsistent).toHaveCSS("border-top-width", "3px");
+});
+
+test("responsive utility precedence preserves the 760px and 900px boundaries", async ({ page }) => {
+  await mockMonth(page, monthView());
+  for (const [width, padding, position] of [[760, "20px", "fixed"], [761, "24px", "static"], [900, "24px", "static"], [901, "32px", "static"]] as const) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect(page.getByRole("banner")).toHaveCSS("padding-left", padding);
+    await expect(page.getByRole("navigation")).toHaveCSS("position", position);
+  }
 });
