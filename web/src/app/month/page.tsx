@@ -4,6 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { BalanceDialog } from "@/components/balance-dialog";
+import { Dialog } from "@/components/dialog";
+import { StatusBadge } from "@/components/status-badge";
+import { formatMoney, formatMonth } from "@/lib/format";
 import { ExpenseChips } from "@/components/expense-chips";
 import { ExpenseSetupManager } from "@/components/expense-setup-manager";
 import { FeedbackBanner } from "@/components/feedback-banner";
@@ -37,10 +40,24 @@ export default function MonthPage() {
   if (state === "onboarding_required") return <AppShell><section className="card empty-state"><h1>ยังไม่มีเดือนที่เริ่มติดตาม</h1><Link className="primary-button" href="/start">เริ่มเดือนแรก</Link></section></AppShell>;
   if (state === "resume_required") return <AppShell><section className="card empty-state"><h1>ต้องเริ่มติดตามใหม่</h1><Link className="primary-button" href="/resume">กรอกยอดของเดือนนี้</Link></section></AppShell>;
   if (!view) return <AppShell><section className="page-loading"><div className="skeleton skeleton-summary" /><div className="skeleton skeleton-card" /></section></AppShell>;
-  return <AppShell>{error ? <FeedbackBanner tone="warning" onDismiss={() => setError(null)}>{error}</FeedbackBanner> : null}<div className="page-heading"><div><p className="eyebrow">FINANCIAL BOUNDARY เดียว</p><h1>เดือนของคุณ</h1></div><Link className="secondary-button" href="/history">ดูประวัติ</Link></div><MonthSummary view={view} /><MonthTimeline view={view} onIncome={() => setDialog("income")} onSnapshot={() => setDialog("snapshot")} onEnding={() => setDialog("ending")} onClose={() => setDialog("close")} /><ExpenseChips view={view} onChange={setView} onSessionExpired={expireSession} /><ExpenseSetupManager view={view} onChange={setView} onSessionExpired={expireSession} />
+  return <AppShell>{error ? <FeedbackBanner tone="warning" onDismiss={() => setError(null)}>{error}</FeedbackBanner> : null}<div className="page-heading"><div><p className="eyebrow">เห็นภาพรวม โดยไม่ต้องจดทุกรายการ</p><h1>เดือนของคุณ</h1><p className="helper-text">รู้ว่าจ่ายไปเท่าไร จากยอดเงินที่คุณมี</p></div><Link className="secondary-button" href="/history">ดูประวัติ</Link></div><div className="month-overview"><MonthSummary view={view} /><MonthTimeline view={view} onIncome={() => setDialog("income")} onSnapshot={() => setDialog("snapshot")} onEnding={() => setDialog("ending")} onClose={() => setDialog("close")} /></div><ExpenseChips view={view} onChange={setView} onSessionExpired={expireSession} /><ExpenseSetupManager view={view} onChange={setView} onSessionExpired={expireSession} />
     {dialog === "income" ? <BalanceDialog title="แก้รายรับ" initialValue={view.summary.income ?? ""} onClose={() => setDialog(null)} onSubmit={(amount) => update(() => api.income(view.month, amount, view.revision))} /> : null}
     {dialog === "ending" ? <BalanceDialog title="บันทึกยอดปลาย" initialValue={view.summary.endingBalance ?? ""} onClose={() => setDialog(null)} onSubmit={(amount) => update(() => api.endingBalance(view.month, amount, view.revision))} /> : null}
     {dialog === "snapshot" ? <BalanceDialog title="บันทึก Snapshot" dateLabel="วันที่เห็นยอด" onClose={() => setDialog(null)} onSubmit={(amount, date) => update(() => api.snapshot(view.month, date ?? "", amount, view.revision))} /> : null}
-    {dialog === "close" ? <div className="dialog-backdrop" role="presentation"><div className="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="close-title"><div className="dialog-heading"><div><h2 id="close-title">ปิดเดือนนี้?</h2><p>ปิดแล้วจะแก้ไขข้อมูลได้ แต่จะไม่เปิดเดือนเดิมอีก</p></div><button className="icon-button" type="button" aria-label="ปิดหน้าต่าง" onClick={() => setDialog(null)}>×</button></div><div className="dialog-actions"><button className="secondary-button" type="button" onClick={() => setDialog(null)}>ยกเลิก</button><button className="primary-button" type="button" onClick={() => { setDialog(null); void update(() => api.close(view.month, view.revision)); }}>ยืนยันปิดเดือน</button></div></div></div> : null}
+    {dialog === "close" ? <Dialog title="ปิดเดือนนี้?" description="ปิดแล้วจะแก้ไขข้อมูลได้ แต่จะไม่เปิดเดือนเดิมอีก" labelledBy="close-title" onClose={() => setDialog(null)}>
+      <div className="close-review">
+        <p className="eyebrow">ตรวจทานก่อนยืนยัน</p>
+        <h3>{formatMonth(view.month)}</h3>
+        <StatusBadge state={view.reconciliation.state} />
+        <dl className="detail-list">
+          <div><dt>รายรับ</dt><dd>{formatMoney(view.summary.income)}</dd></div>
+          <div><dt>ยอดปลาย</dt><dd>{formatMoney(view.summary.endingBalance)}</dd></div>
+          <div><dt>รายจ่ายทั้งเดือน</dt><dd>{formatMoney(view.summary.monthlySpending)}</dd></div>
+          <div><dt>ไม่ระบุรายการ</dt><dd>{formatMoney(view.summary.unitemizedSpending)}</dd></div>
+        </dl>
+        <p className="helper-text">หากแก้ไขข้อมูลภายหลัง ยอดของเดือนถัดไปที่ต่อเนื่องกันอาจเปลี่ยนตาม</p>
+      </div>
+      <div className="dialog-actions"><button className="secondary-button" type="button" onClick={() => setDialog(null)}>ยกเลิก</button><button className="primary-button" type="button" onClick={() => { setDialog(null); void update(() => api.close(view.month, view.revision)); }}>ยืนยันปิดเดือน</button></div>
+    </Dialog> : null}
   </AppShell>;
 }

@@ -27,7 +27,7 @@ export function ExpenseChips({ view, onChange, onSessionExpired = () => window.l
     setError(null);
   }
   return <section className="expense-chips card" aria-labelledby="chips-title">
-    <div className="section-heading"><div><p className="eyebrow">รายละเอียดที่นึกได้</p><h2 id="chips-title">กดรายการที่จ่ายแล้ว</h2></div><span className="helper-text">แสดงทุกรายการ ไม่ต้องรอสิ้นเดือน</span></div>
+    <div className="section-heading"><div><p className="eyebrow">รายละเอียดที่นึกได้</p><h2 id="chips-title">กดรายการที่จ่ายแล้ว</h2></div><span className="helper-text">รายละเอียดช่วยอธิบายยอดรายจ่าย ไม่เพิ่มยอดรายจ่ายทั้งเดือน</span></div>
     {message ? <FeedbackBanner tone="warning" onDismiss={() => setMessage(null)}>{message}</FeedbackBanner> : null}
     <div className="chip-list" role="list" aria-label="เลือกรายการรายจ่าย">
       {items.length === 0 ? <p className="empty-state">ยังไม่มีรายการให้เลือก</p> : items.map((item) => <div key={item.id} role="listitem"><button type="button" className={`expense-chip${item.detail ? " is-confirmed" : ""}${item.isPaused ? " is-paused" : ""}`} onClick={() => choose(item)} disabled={!view.allowedActions.confirmDetails} aria-pressed={Boolean(item.detail)}><span aria-hidden="true">{item.detail ? "✓" : "○"}</span><span>{item.name}</span><small>{item.detail ? item.detail.confirmedAmount : item.kind === "fixed" ? item.fixedAmount : "กรอกยอด"}</small></button></div>)}

@@ -1,6 +1,6 @@
 import type { ReconciliationState } from "@/lib/api-client";
 
-const statusText: Record<ReconciliationState, string> = {
+export const statusText: Record<ReconciliationState, string> = {
   draft: "กำลังกรอก",
   needs_information: "ข้อมูลไม่ครบ",
   inconsistent: "ยอดไม่สอดคล้อง",
