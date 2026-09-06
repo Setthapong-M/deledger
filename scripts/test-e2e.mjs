@@ -1,5 +1,12 @@
 import { spawnSync } from "node:child_process";
-const env = { ...process.env, DATABASE_URL: "postgresql://postgres:test-only-placeholder@127.0.0.1:55432/deledger_test", MIGRATION_DATABASE_URL: "postgresql://postgres:test-only-placeholder@127.0.0.1:55432/deledger_test" };
+const env = {
+  ...process.env,
+  CLOUDFLARE_TEAM_DOMAIN: undefined,
+  CLOUDFLARE_ACCESS_AUD: undefined,
+  CLOUDFLARE_TUNNEL_TOKEN: undefined,
+  DATABASE_URL: "postgresql://postgres:test-only-placeholder@127.0.0.1:55432/deledger_test",
+  MIGRATION_DATABASE_URL: "postgresql://postgres:test-only-placeholder@127.0.0.1:55432/deledger_test",
+};
 function run(command, args) { return spawnSync(command, args, { env, stdio: "inherit" }).status ?? 1; }
 let status = 1;
 try {
