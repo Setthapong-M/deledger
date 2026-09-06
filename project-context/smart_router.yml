@@ -1,0 +1,113 @@
+schema_version: 1
+path_base: repository_root
+selection: union_of_all_matching_routes
+match_semantics: task_intent_or_any_path_glob
+baseline:
+  - project-context/config/project.yml
+  - project-context/standards/common/README.md
+routes:
+  - id: architecture
+    intents: [architecture, topology, dependency-change, สถาปัตยกรรม]
+    paths: ["infra/**", "**/Dockerfile", "**/package.json"]
+    read:
+      - project-context/architecture/overview.md
+      - project-context/architecture/impact-map.md
+      - docs/adr/0008-split-presentation-and-business-services.md
+  - id: backend
+    intents: [api, new-use-case, validation, endpoint, เพิ่มฟีเจอร์]
+    paths: ["api/src/**"]
+    read:
+      - project-context/standards/backend/README.md
+      - project-context/guides_flows/new-use-case.md
+      - project-context/architecture/impact-map.md
+      - project-context/qa_testing/README.md
+  - id: accounting
+    intents: [money, closing, snapshot, recurring-expense, archive, restore, เงิน, ปิดเดือน]
+    paths: ["api/src/server/domain/**", "api/src/server/services/**", "api/src/scheduler.ts"]
+    read:
+      - CONTEXT.md
+      - docs/adr/0001-closed-months-remain-correctable.md
+      - docs/adr/0002-monthly-expense-details-preserve-confirmed-facts.md
+      - docs/adr/0003-manual-and-automatic-close-use-different-gates.md
+      - docs/adr/0004-archival-creates-an-explicit-tracking-gap.md
+      - docs/adr/0006-derive-monthly-summaries-from-stored-facts.md
+      - project-context/architecture/impact-map.md
+      - project-context/qa_testing/README.md
+  - id: identity
+    intents: [authentication, login, profile, user-isolation, security, สิทธิ์]
+    paths: ["api/src/server/auth/**", "api/src/server/db/**", "api/src/server/services/profile.ts", "api/src/server/services/local-auth.ts", "api/src/server/config.ts"]
+    read:
+      - project-context/standards/backend/database.md
+      - project-context/architecture/overview.md
+      - docs/operations/operator-runbook.md
+      - project-context/qa_testing/README.md
+  - id: database
+    intents: [prisma, migration, schema, locking, rls, ฐานข้อมูล]
+    paths: ["api/prisma/**", "api/prisma.config.ts", "api/src/server/repositories/**", "db/**", "infra/migrate/**"]
+    read:
+      - project-context/standards/backend/database.md
+      - project-context/guides_flows/migrations.md
+      - docs/operations/database-access.md
+      - project-context/qa_testing/README.md
+  - id: frontend
+    intents: [ui, component, accessibility, tailwind, หน้าจอ]
+    paths: ["web/**"]
+    read:
+      - web/AGENTS.md
+      - project-context/standards/frontend/README.md
+      - project-context/architecture/impact-map.md
+      - project-context/qa_testing/README.md
+  - id: development
+    intents: [setup, local, seed, เริ่มพัฒนา]
+    paths: ["scripts/dev-local.sh", ".env.local.example", "scripts/seed-local.mjs"]
+    read:
+      - project-context/guides_flows/development.md
+      - project-context/troubleshooting/known-issues.md
+  - id: operations
+    intents: [deploy, release, qas, backup, cutover]
+    paths: ["infra/**", "scripts/verify-release.sh", "scripts/setup-private-beta.sh", "api/src/operator.ts"]
+    read:
+      - project-context/architecture/overview.md
+      - docs/operations/deploy-private-beta.md
+      - docs/operations/operator-runbook.md
+      - docs/operations/release-checklist.md
+      - project-context/troubleshooting/known-issues.md
+  - id: recovery
+    intents: [backup, restore-database, recovery, กู้คืนฐานข้อมูล]
+    paths: ["infra/backup/**", "scripts/test-backup-restore.sh", "docs/operations/backup-restore.md"]
+    read:
+      - docs/operations/backup-restore.md
+      - project-context/standards/backend/database.md
+  - id: debugging
+    intents: [bug, debug, failure, performance, แก้บั๊ก, ช้า]
+    paths: []
+    read:
+      - project-context/troubleshooting/known-issues.md
+      - project-context/architecture/impact-map.md
+      - project-context/qa_testing/README.md
+  - id: testing
+    intents: [test, coverage, regression, ทดสอบ]
+    paths: ["api/tests/**", "web/tests/**", "web/e2e/**", "scripts/test-*", ".github/workflows/**"]
+    read:
+      - project-context/qa_testing/README.md
+      - project-context/troubleshooting/known-issues.md
+  - id: review
+    intents: [review, pr, mr, ตรวจโค้ด]
+    paths: []
+    read:
+      - project-context/review/REVIEW_GUIDELINES.md
+      - project-context/review/drift.md
+      - project-context/architecture/impact-map.md
+  - id: documentation
+    intents: [documentation, standards, context, handoff, เอกสาร]
+    paths: ["project-context/**", "docs/**", "README.md", "AGENTS.md", "CLAUDE.md", "GEMINI.md", ".cursor/rules/**"]
+    read:
+      - docs/agents/domain.md
+      - docs/agents/issue-tracker.md
+      - project-context/review/drift.md
+      - project-context/session/README.md
+fallback:
+  read:
+    - project-context/architecture/overview.md
+    - project-context/architecture/impact-map.md
+  action: Identify owning source paths, then select their routes before editing.

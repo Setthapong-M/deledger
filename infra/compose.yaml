@@ -12,13 +12,11 @@ services:
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
       POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
       DELEDGER_WEB_PASSWORD_FILE: /run/secrets/web_password
-      DELEDGER_MAINTENANCE_PASSWORD_FILE: /run/secrets/maintenance_password
-      DELEDGER_OPERATOR_PASSWORD_FILE: /run/secrets/operator_password
+      DELEDGER_IDENTITY_PASSWORD_FILE: /run/secrets/identity_password
     secrets:
       - postgres_password
       - web_password
-      - maintenance_password
-      - operator_password
+      - identity_password
     networks:
       - data
     volumes:
@@ -43,18 +41,13 @@ services:
       NODE_ENV: production
       PORT: "80"
       DELEDGER_ENV: ${DELEDGER_ENV:-qas}
-      APP_ORIGIN: http://deledger.internal
-      BUSINESS_TIME_ZONE: Asia/Bangkok
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-      CLOUDFLARE_TEAM_DOMAIN: ${CLOUDFLARE_TEAM_DOMAIN:?CLOUDFLARE_TEAM_DOMAIN is required}
-      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:?CLOUDFLARE_ACCESS_AUD is required}
-      BACKUP_MODE: ${BACKUP_MODE:?BACKUP_MODE is required}
+      API_ORIGIN: http://api:3001
     depends_on:
-      postgres: {condition: service_healthy}
+      api: {condition: service_healthy}
     networks:
       edge:
         aliases: [deledger.internal]
-      data: {}
+      app: {}
     expose: ["80"]
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:80/api/health/live').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))"]
@@ -66,6 +59,40 @@ services:
       - /tmp:rw,noexec,nosuid,size=64m
     cap_drop: [ALL]
     cap_add: [NET_BIND_SERVICE]
+    user: "1001:1001"
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
+
+  api:
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3001"
+      DELEDGER_ENV: ${DELEDGER_ENV:-qas}
+      APP_ORIGIN: http://deledger.internal
+      BUSINESS_TIME_ZONE: Asia/Bangkok
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      IDENTITY_DATABASE_URL: ${IDENTITY_DATABASE_URL:?IDENTITY_DATABASE_URL is required}
+      CLOUDFLARE_TEAM_DOMAIN: ${CLOUDFLARE_TEAM_DOMAIN:?CLOUDFLARE_TEAM_DOMAIN is required}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:?CLOUDFLARE_ACCESS_AUD is required}
+      BACKUP_MODE: ${BACKUP_MODE:?BACKUP_MODE is required}
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [app, data, api-egress]
+    expose: ["3001"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health/live').then(r => { if (!r.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    cap_drop: [ALL]
     user: "1001:1001"
     restart: unless-stopped
     logging:
@@ -122,9 +149,14 @@ services:
 
 networks:
   edge:
-    name: deledger_edge
+    name: ${DELEDGER_EDGE_NETWORK:-deledger_edge}
+  app:
+    name: ${DELEDGER_APP_NETWORK:-deledger_app}
+    internal: true
+  api-egress:
+    name: ${DELEDGER_API_EGRESS_NETWORK:-deledger_api_egress}
   data:
-    name: deledger_data
+    name: ${DELEDGER_DATA_NETWORK:-deledger_data}
     internal: true
 
 volumes:
@@ -136,7 +168,5 @@ secrets:
     file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/postgres_password
   web_password:
     file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/web_password
-  maintenance_password:
-    file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/maintenance_password
-  operator_password:
-    file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/operator_password
+  identity_password:
+    file: ${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}/identity_password

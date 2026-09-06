@@ -31,3 +31,6 @@ test-results/
 # Next development metadata
 /web/AGENTS.md
 /web/CLAUDE.md
+
+/api/src/generated/
+!api/prisma/migrations/**/*.sql

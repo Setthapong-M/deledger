@@ -1,75 +1,89 @@
 # Deledger
 
-Deledger is an invite-only monthly income-and-expense accounting app. It calculates monthly spending from aggregate balance inputs so a User can understand the month without reconstructing every transaction.
+Deledger เป็นแอปสรุปรายรับ–รายจ่ายรายเดือนจากยอดเงินรวม ผู้ใช้บันทึก Income และยอดเงินปลายเดือนเพื่อคำนวณ Monthly Spending โดยไม่ต้องลงธุรกรรมทุกครั้ง รองรับ Balance Snapshots, ค่าใช้จ่ายประจำ, การแก้เดือนที่ปิดแล้ว และการพัก/กลับมาติดตามข้อมูล
 
-## Private Beta boundary
+## Tech stack
 
-The MVP runs locally behind Cloudflare Private WARP and Cloudflare Access Email OTP. There is no public hostname, self-registration, bank integration, credit-card cycle, or ordinary permanent deletion. Only explicitly invited emails can reach the application.
-
-## Architecture
+| ส่วน | เทคโนโลยี | ความรับผิดชอบ |
+| --- | --- | --- |
+| Frontend | Next.js App Router, React, Tailwind CSS | UI, navigation และ same-origin API proxy |
+| Backend | NestJS, TypeScript, Zod | API, authentication, validation, accounting, operator และ scheduler |
+| Persistence | Prisma, PostgreSQL | Schema, migrations, database access, exact decimals และ forced RLS |
+| Private ingress | Cloudflare WARP, Access, Tunnel | Private beta สำหรับผู้ได้รับอนุญาต |
 
 ```text
-Cloudflare One Client (WARP)
-          |
-Cloudflare Access Email OTP
-          |
-Named Cloudflare Tunnel -> Next.js App Router (web)
-                              |
-                       PostgreSQL + pg_cron (db)
+Local browser ──────────────────┐
+                               ▼
+WARP → Access → Tunnel → Next.js → NestJS → Prisma → PostgreSQL
+                         web/      api/              db/
 ```
 
-The web server owns HTTP parsing and authentication, service modules own atomic use cases, repositories own SQL, and domain modules derive the complete Month View. PostgreSQL forced RLS is the final User-isolation boundary.
+NestJS ถือ business logic รวมถึง logic ที่เคยอยู่ใน PostgreSQL functions; Next.js แสดงผลลัพธ์และ `allowedActions` การเขียนข้อมูลของผู้ใช้ผูก identity, lock และ RLS ภายใน transaction เดียว อ่านเหตุผลใน [ADR 0008](docs/adr/0008-split-presentation-and-business-services.md)
 
-## Development prerequisites
+## เริ่มพัฒนาในเครื่อง
 
-- Node.js `22.23.1`
-- pnpm `11.1.3`
-- Docker Engine `29.2.1` and Docker Compose `5.0.2`
-- GitHub CLI for the requested branch/PR workflow
-
-Copy `.env.example` for local operator configuration. Use `.env.test.example` only with the disposable loopback test database. Never commit either file with real values.
-
-## Commands
+ติดตั้ง Node.js และ pnpm ตาม `engines` / `packageManager` ใน [package.json](package.json) พร้อม Docker Engine และ Compose ที่รองรับไฟล์ใน `infra/` ใช้ lockfile เป็น dependency baseline
 
 ```bash
-pnpm install
-pnpm dev
+git clone https://github.com/Setthapong-M/deledger.git
+cd deledger
+pnpm install --frozen-lockfile
 pnpm dev:local
-pnpm seed:local
-pnpm qc
-pnpm test:unit
-pnpm test:integration
-pnpm test:e2e
-pnpm test:ops
-pnpm test:coverage
-pnpm test:all
-pnpm verify:release
-# First-host activation wizard (pauses for Cloudflare/WARP and secret custody)
-ENV_FILE=.env ./scripts/setup-private-beta.sh
 ```
 
-`test:integration`, `test:ops`, and `test:coverage` create and remove the disposable loopback PostgreSQL stack automatically. Browser tests use local fixtures and never call Cloudflare or production data.
+เปิด <http://127.0.0.1:3000> แล้ว login ด้วยอีเมลหรือเบอร์มือถือไทย local login ใช้สำหรับ development โดยไม่ต้องใช้รหัสผ่านหรือ OTP
 
-For local development without Cloudflare, copy `.env.local.example` to a local env file or run `pnpm dev:local`. The command starts only the dedicated local PostgreSQL Compose service on port `55433`, runs migrations with the database administrator connection, and starts Next.js on `http://127.0.0.1:3000`. The local login accepts one email or Thai mobile number and does not request a password or OTP. Local data uses its own volume and network; the QAS stack remains under `infra/compose.yaml`.
+`dev:local` เริ่ม PostgreSQL ของ local, generate Prisma client, apply migrations และเริ่ม Next กับ Nest หากต้องปรับค่า ให้สร้าง `.env.local` จาก [.env.local.example](.env.local.example) เมื่อยังไม่มีไฟล์ แล้วปรับ `LOCAL_*` ตาม [คู่มือ development](project-context/guides_flows/development.md) ส่วน `pnpm dev` เริ่มเฉพาะ frontend และต้องตั้ง Nest/API origin เอง
 
-To load deterministic demo Users without touching QAS or the disposable test database, load the local environment and run `pnpm seed:local`:
+| Environment | Frontend / API | Database | Authentication |
+| --- | --- | --- | --- |
+| local | Loopback `3000` / `3001` | `deledger_local`, loopback `55433` | Local session |
+| test | E2E loopback `3014` / `3015` | `deledger_test`, loopback `55432` | Fixtures และ signed JWT ในฐานทดสอบ |
+| qas | `http://deledger.internal`, ไม่มี published host ports | `deledger` บน private Docker network | WARP + Access JWT + invitation |
+
+`DELEDGER_ENV=prod` ยังไม่รองรับและทำให้ startup ปฏิเสธการทำงาน ส่วน QAS เป็น private beta ปัจจุบัน
+
+ต้องการข้อมูลตัวอย่าง ให้มี `.env.local` จาก template ซึ่งตั้ง `LOCAL_ADMIN_DATABASE_URL` แล้วเปิดอีก terminal หลัง local พร้อม:
 
 ```bash
-set -a; source .env.local; set +a
+set -a
+source .env.local
+set +a
 pnpm seed:local
 ```
 
-The seed creates an email-only User, a phone-only User and a linked User with a sample Reconciled Month. It is safe to rerun: existing seeded Users are left unchanged, and the command refuses non-local administrator database targets.
+Seed สร้าง demo Users แบบ email, phone และ linked identity พร้อมตัวอย่างเดือนที่ reconcile แล้ว โดยข้าม demo Users ที่มีอยู่ ดูข้อมูลตัวอย่างใน [seed-local.mjs](scripts/seed-local.mjs)
 
-The private-beta wizard is intentionally operator-driven: it does not capture the
-offline age private key, does not make Cloudflare policy changes automatically,
-and stops before readiness when the off-device backup mount is absent. Run it only
-on the host that owns the production Docker stack, with `ENV_FILE` pointing to a
-mode-600 file outside version control.
+## ตรวจคุณภาพ
 
-## Project documents
+```bash
+pnpm qc
+pnpm build
+pnpm test:all
+```
 
-- [Domain context](CONTEXT.md)
-- [Executable specification](.scratch/deledger-online-mvp/spec.md)
-- [Implementation plan](.scratch/deledger-online-mvp/implementation-plan.md)
-- [Private deployment runbook](docs/operations/deploy-private-beta.md)
+เลือกตรวจเฉพาะส่วนด้วย `test:unit`, `test:integration`, `test:e2e`, `test:ops` หรือ `test:coverage` ตาม [testing guide](project-context/qa_testing/README.md) ตัวรัน integration/E2E/operations/coverage ใช้ PostgreSQL ทดสอบแบบ disposable; รันทีละชุดเพราะใช้ฐานทดสอบเดียวกัน และหยุด local Next dev ก่อน E2E ใน checkout เดียวกัน
+
+ESLint configuration ปัจจุบันยกเว้น TS/TSX ดังนั้น `lint` ผ่านอย่างเดียวไม่ยืนยันคุณภาพ TypeScript ต้องตรวจ compiler, tests และ review ด้วย
+
+## Deploy และจัดการข้อมูล
+
+ใช้ [deployment runbook](docs/operations/deploy-private-beta.md) และ [operator runbook](docs/operations/operator-runbook.md) สำหรับ migrations, invitation, archive/restore และ export เก็บ runtime environment และ secrets นอก Git; frontend ได้เฉพาะ API origin ส่วน database/Access verifier credentials อยู่ที่ Nest
+
+Migration แรกของ stack นี้ต้องใช้ฐานใหม่ การเปลี่ยนจาก legacy database ต้องตรวจชื่อฐาน, Compose project และ volume ก่อนล้างข้อมูล `dev:local` apply migrations โดยไม่ reset ฐานเดิม การ reset local/QAS ต้องมีการอนุมัติที่ครอบคลุมเป้าหมาย และหลัง reset QAS ต้อง invite ผู้ใช้ใหม่
+
+Private beta ตั้ง `BACKUP_MODE=disabled` จึงไม่มี recovery path หาก volume สูญหาย การเปิด backup ภายหลังต้องทำตาม [backup/restore runbook](docs/operations/backup-restore.md)
+
+## โครงสร้างและบริบทกลาง
+
+| Path | เนื้อหา |
+| --- | --- |
+| `web/` | Next frontend, components, API client/proxy และ browser/component tests |
+| `api/` | Nest API, domain/services, Prisma schema/migrations และ backend tests |
+| `db/`, `infra/`, `scripts/` | PostgreSQL bootstrap, deployment และ development/verification tools |
+| [project-context/](project-context/README.md) | จุดเริ่มต้นกลางสำหรับ architecture, standards, guides, troubleshooting และ review |
+| [CONTEXT.md](CONTEXT.md) | Domain glossary ที่ใช้อ้างอิงร่วมกัน |
+| [docs/adr/](docs/adr/) | ประวัติและเหตุผลของ architectural decisions |
+| `.scratch/` | Decision maps, specs, tickets และหลักฐานของแต่ละ effort |
+
+นักพัฒนาเริ่มที่ [project-context/README.md](project-context/README.md) ส่วน AI Agents เริ่มที่ [AGENTS.md](AGENTS.md) แล้วเลือกเอกสารตาม [smart_router.yml](project-context/smart_router.yml) Router เป็นดัชนีการอ่าน ไม่ใช่ runtime plugin; หากเครื่องมือไม่โหลด entry file ให้อัตโนมัติ ให้แนบสองไฟล์นี้ใน task prompt

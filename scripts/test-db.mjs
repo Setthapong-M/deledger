@@ -8,8 +8,8 @@ if (!new Set(["up", "reset", "down"]).has(command)) {
 
 const databaseUrl = process.env.DATABASE_URL ?? "postgresql://deledger_test:test@127.0.0.1:55432/deledger_test";
 const parsed = new URL(databaseUrl);
-if (parsed.hostname !== "127.0.0.1" || parsed.port !== "55432" || !parsed.pathname.endsWith("_test")) {
-  console.error("refusing test database outside loopback 127.0.0.1:55432 with _test database");
+if (parsed.protocol !== "postgresql:" || parsed.hostname !== "127.0.0.1" || parsed.port !== "55432" || parsed.pathname !== "/deledger_test") {
+  console.error("refusing test database outside loopback 127.0.0.1:55432 with /deledger_test database");
   process.exit(2);
 }
 

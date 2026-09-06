@@ -11,12 +11,13 @@ require_command() {
 }
 
 : "${DATABASE_URL:?DATABASE_URL is required}"
+: "${IDENTITY_DATABASE_URL:?IDENTITY_DATABASE_URL is required}"
 : "${CLOUDFLARE_TEAM_DOMAIN:?CLOUDFLARE_TEAM_DOMAIN is required}"
 : "${CLOUDFLARE_ACCESS_AUD:?CLOUDFLARE_ACCESS_AUD is required}"
 : "${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN is required}"
 : "${BACKUP_MODE:?BACKUP_MODE is required (disabled or enforced)}"
 [[ "$BACKUP_MODE" == "disabled" || "$BACKUP_MODE" == "enforced" ]] || fail "BACKUP_MODE must be disabled or enforced"
-export DATABASE_URL CLOUDFLARE_TEAM_DOMAIN CLOUDFLARE_ACCESS_AUD CLOUDFLARE_TUNNEL_TOKEN BACKUP_MODE
+export DATABASE_URL IDENTITY_DATABASE_URL CLOUDFLARE_TEAM_DOMAIN CLOUDFLARE_ACCESS_AUD CLOUDFLARE_TUNNEL_TOKEN BACKUP_MODE
 
 [[ "$(node --version)" == "v22.23.1" ]] || fail "Node 22.23.1 required"
 [[ "$(pnpm --version)" == "11.1.3" ]] || fail "pnpm 11.1.3 required"
@@ -24,7 +25,7 @@ for command in docker find stat; do require_command "$command"; done
 
 secret_dir="${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}"
 [[ -d "$secret_dir" ]] || fail "Compose secret directory is required: $secret_dir"
-for secret_name in postgres_password web_password maintenance_password operator_password; do
+for secret_name in postgres_password web_password identity_password; do
   secret_path="$secret_dir/$secret_name"
   [[ -r "$secret_path" ]] || fail "Compose secret is not readable: $secret_path"
   secret_mode="$(stat -c '%a' "$secret_path")"
@@ -79,18 +80,19 @@ expect_db_value() {
   [[ "$actual" == "$expected" ]] || fail "$label"
 }
 
-expected_migration="$(find db/migrations -maxdepth 1 -type f -name '*.cjs' -printf '%f\n' | sed 's/\.cjs$//' | sort | tail -n 1)"
+expected_migration="$(find api/prisma/migrations -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | tail -n 1)"
 [[ -n "$expected_migration" ]] || fail "no migration files found"
 expect_db_value "migration head is not current" "$expected_migration" \
-  "SELECT name FROM public.pgmigrations ORDER BY run_on DESC, name DESC LIMIT 1"
-expect_db_value "all financial tables must use forced RLS" "7" \
-  "SELECT count(*)::text FROM pg_class AS c JOIN pg_namespace AS n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname IN ('app_user','user_identity_email','user_archive_period','reporting_month','balance_snapshot','monthly_recurring_expense','monthly_expense_detail') AND c.relrowsecurity AND c.relforcerowsecurity"
-expect_db_value "runtime roles must not bypass ownership controls" "3" \
-  "SELECT count(*)::text FROM pg_roles WHERE rolname IN ('deledger_web','deledger_maintenance','deledger_operator') AND NOT rolsuper AND NOT rolbypassrls AND NOT rolcreaterole AND NOT rolcreatedb"
+  "SELECT migration_name FROM public._prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY started_at DESC LIMIT 1"
+expect_db_value "all application tables must use forced RLS" "9" \
+  "SELECT count(*)::text FROM pg_class AS c JOIN pg_namespace AS n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname IN ('app_user','user_identity_email','user_identity_phone','local_session','user_archive_period','reporting_month','balance_snapshot','monthly_recurring_expense','monthly_expense_detail') AND c.relrowsecurity AND c.relforcerowsecurity"
+expect_db_value "restricted runtime role must not bypass ownership controls" "1" \
+  "SELECT count(*)::text FROM pg_roles WHERE rolname = 'deledger_web' AND NOT rolsuper AND NOT rolbypassrls AND NOT rolcreaterole AND NOT rolcreatedb"
 expect_db_value "web role must not own financial tables" "0" \
-  "SELECT count(*)::text FROM pg_class AS c JOIN pg_namespace AS n ON n.oid = c.relnamespace JOIN pg_roles AS r ON r.oid = c.relowner WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname IN ('app_user','user_identity_email','user_archive_period','reporting_month','balance_snapshot','monthly_recurring_expense','monthly_expense_detail') AND r.rolname = 'deledger_web'"
-expect_db_value "calendar catch-up cron is not configured exactly" "1" \
-  "SELECT count(*)::text FROM cron.job WHERE jobname = 'deledger-catch-up' AND schedule = '5 0 * * *' AND command = 'SELECT public.catch_up_reporting_months();' AND database = current_database()"
+  "SELECT count(*)::text FROM pg_class AS c JOIN pg_namespace AS n ON n.oid = c.relnamespace JOIN pg_roles AS r ON r.oid = c.relowner WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname IN ('app_user','user_identity_email','user_identity_phone','local_session','user_archive_period','reporting_month','balance_snapshot','monthly_recurring_expense','monthly_expense_detail') AND r.rolname = 'deledger_web'"
+expect_db_value "identity role must have scoped administrative privileges" "1" \
+  "SELECT count(*)::text FROM pg_roles WHERE rolname = 'deledger_identity' AND rolbypassrls AND NOT rolsuper AND NOT rolcreaterole AND NOT rolcreatedb AND NOT rolinherit"
+"${compose[@]}" exec -T api node -e "fetch('http://127.0.0.1:3001/api/health/live').then(r => { if (!r.ok) process.exit(1); })" || fail "Nest API is unavailable"
 
 pnpm install --frozen-lockfile
 pnpm lint
@@ -101,10 +103,11 @@ pnpm test:all
 release_id="${DELEDGER_RELEASE_CHECK_ID:-$$}"
 db_image="deledger-release-db:${release_id}"
 web_image="deledger-release-web:${release_id}"
+api_image="deledger-release-api:${release_id}"
 migrate_image="deledger-release-migrate:${release_id}"
 backup_image=""
 cleanup_images() {
-  docker image rm "$migrate_image" "$web_image" "$db_image" >/dev/null 2>&1 || true
+  docker image rm "$migrate_image" "$web_image" "$api_image" "$db_image" >/dev/null 2>&1 || true
   if [[ -n "$backup_image" ]]; then
     docker image rm "$backup_image" >/dev/null 2>&1 || true
   fi
@@ -112,6 +115,7 @@ cleanup_images() {
 trap cleanup_images EXIT
 docker build --tag "$db_image" -f db/Dockerfile .
 docker build --tag "$web_image" -f web/Dockerfile .
+docker build --tag "$api_image" -f api/Dockerfile .
 docker build --tag "$migrate_image" -f infra/migrate/Dockerfile .
 
 web_user="$(docker image inspect "$web_image" --format '{{.Config.User}}')"
@@ -159,6 +163,7 @@ assert_clean_migrate_image() {
   ' || fail "migration image contains a forbidden runtime artifact"
 }
 assert_clean_web_image "$web_image"
+assert_clean_web_image "$api_image"
 assert_clean_db_image "$db_image"
 assert_clean_migrate_image "$migrate_image"
 

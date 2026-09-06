@@ -1,8 +1,8 @@
-import pg from "pg";
+import { PrismaPg } from "../api/node_modules/@prisma/adapter-pg/dist/index.mjs";
+import { PrismaClient } from "../api/src/generated/prisma/client.ts";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const { Pool } = pg;
 
 const seededUsers = [
   {
@@ -58,63 +58,41 @@ export function localAdminDatabaseUrl(environment = process.env) {
 }
 
 export async function seedLocal(client) {
-  const results = [];
-  await client.query("BEGIN");
-  try {
-    for (const user of seededUsers) results.push(await seedUser(client, user));
-    await client.query("COMMIT");
+  return client.$transaction(async transaction => {
+    const results = [];
+    for (const user of seededUsers) {
+      if (await transaction.app_user.findUnique({where: {id: user.id}})) {
+        results.push({label: user.label, state: "skipped"});
+        continue;
+      }
+      await transaction.app_user.create({data: {
+        id: user.id, date_of_birth: user.dateOfBirth ? new Date(user.dateOfBirth) : null,
+        ...(user.email ? {emails: {create: {normalized_email: user.email}}} : {}),
+        ...(user.phone ? {phones: {create: {normalized_phone: user.phone}}} : {}),
+      }});
+      if (user.month) {
+        const month = user.month;
+        const month_start = new Date(month.monthStart);
+        await transaction.reporting_month.create({data: {owner_id: user.id, month_start, tracked_from: new Date(month.trackedFrom), opening_source: "supplied", opening_balance_input: month.openingBalance, income_amount: month.income, ending_balance_amount: month.endingBalance, closed_at: new Date(month.closedAt), closed_by: "manual"}});
+        for (const item of month.setup) {
+          await transaction.monthly_recurring_expense.create({data: {owner_id: user.id, month_start, id: item.id, position: item.position, name: item.name, kind: item.kind, fixed_amount: item.fixedAmount}});
+          await transaction.monthly_expense_detail.create({data: {owner_id: user.id, month_start, setup_item_id: item.id, confirmed_name: item.name, confirmed_kind: item.kind, confirmed_amount: item.detailAmount}});
+        }
+      }
+      results.push({label: user.label, state: "seeded"});
+    }
     return results;
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  }
-}
-
-async function seedUser(client, user) {
-  const existing = await client.query("SELECT 1 FROM public.app_user WHERE id = $1", [user.id]);
-  if (existing.rowCount !== 0) return { label: user.label, state: "skipped" };
-  await assertContactAvailable(client, "user_identity_email", "normalized_email", user.email, user.id);
-  await assertContactAvailable(client, "user_identity_phone", "normalized_phone", user.phone, user.id);
-  await client.query("INSERT INTO public.app_user (id, date_of_birth) VALUES ($1, $2)", [user.id, user.dateOfBirth]);
-  if (user.email) await client.query("INSERT INTO public.user_identity_email (normalized_email, owner_id) VALUES ($1, $2)", [user.email, user.id]);
-  if (user.phone) await client.query("INSERT INTO public.user_identity_phone (normalized_phone, owner_id) VALUES ($1, $2)", [user.phone, user.id]);
-  if (user.month) await seedMonth(client, user.id, user.month);
-  return { label: user.label, state: "seeded" };
-}
-
-async function assertContactAvailable(client, table, column, value, ownerId) {
-  if (!value) return;
-  const result = await client.query(`SELECT owner_id FROM public.${table} WHERE ${column} = $1`, [value]);
-  if (result.rows[0] && result.rows[0].owner_id !== ownerId) throw new Error(`seed contact ${value} already belongs to another User`);
-}
-
-async function seedMonth(client, ownerId, month) {
-  await client.query(
-    "INSERT INTO public.reporting_month (owner_id, month_start, tracked_from, opening_source, opening_balance_input, income_amount, ending_balance_amount, closed_at, closed_by) VALUES ($1, $2, $3, 'supplied', $4, $5, $6, $7, 'manual')",
-    [ownerId, month.monthStart, month.trackedFrom, month.openingBalance, month.income, month.endingBalance, month.closedAt],
-  );
-  for (const item of month.setup) {
-    await client.query(
-      "INSERT INTO public.monthly_recurring_expense (owner_id, month_start, id, position, name, kind, fixed_amount) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-      [ownerId, month.monthStart, item.id, item.position, item.name, item.kind, item.fixedAmount],
-    );
-    await client.query(
-      "INSERT INTO public.monthly_expense_detail (owner_id, month_start, setup_item_id, confirmed_name, confirmed_kind, confirmed_amount) VALUES ($1, $2, $3, $4, $5, $6)",
-      [ownerId, month.monthStart, item.id, item.name, item.kind, item.detailAmount],
-    );
-  }
+  });
 }
 
 async function main() {
   if (process.env.DELEDGER_ENV !== "local") throw new Error("seed-local requires DELEDGER_ENV=local");
-  const pool = new Pool({ connectionString: localAdminDatabaseUrl() });
-  const client = await pool.connect();
+  const client = new PrismaClient({ adapter: new PrismaPg({ connectionString: localAdminDatabaseUrl() }) });
   try {
     const results = await seedLocal(client);
     for (const result of results) console.log(`${result.state} ${result.label}`);
   } finally {
-    client.release();
-    await pool.end();
+    await client.$disconnect();
   }
 }
 

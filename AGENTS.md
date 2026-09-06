@@ -1,5 +1,9 @@
 # Deledger Agent Guide
 
+## Start here
+
+For every repository task, read `project-context/README.md` and follow `project-context/smart_router.yml`: load its baseline, then the union of routes matching the task and touched paths. Follow directory-specific `AGENTS.md` files when working there. Keep shared standards in `project-context/`; use pointers here instead of copying them.
+
 ## Agent skills
 
 ### Issue tracker

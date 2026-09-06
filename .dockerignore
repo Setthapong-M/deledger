@@ -23,3 +23,7 @@ test-results
 runtime
 backups
 mnt
+
+!api/prisma/migrations/**/*.sql
+**/dist
+api/src/generated

@@ -25,7 +25,7 @@ jobs:
       - name: Static checks
         run: pnpm lint && pnpm typecheck && pnpm build
       - name: Container checks
-        run: docker build -f db/Dockerfile . && docker build -f web/Dockerfile . && docker build -f infra/backup/Dockerfile .
+        run: docker build -f db/Dockerfile . && docker build -f api/Dockerfile . && docker build -f web/Dockerfile . && docker build -f infra/backup/Dockerfile .
       - name: Unit tests
         run: pnpm test:unit
       - name: PostgreSQL integration tests

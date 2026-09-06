@@ -25,7 +25,21 @@ export function ProfileForm({ environment }: { environment: "local" | "qas" }) {
     setFieldErrors({});
     window.location.assign("/login");
   }
-  useEffect(() => { void api.profile().then((next) => { setProfile(next); setEmail(next.email ?? ""); setPhone(next.phone ?? ""); setDateOfBirth(next.dateOfBirth ?? ""); }).catch((reason) => { if (isAuthenticationError(reason)) { expireSession(); return; } setError(reason instanceof Error ? reason.message : "โหลดข้อมูลไม่สำเร็จ"); }); }, []);
+  useEffect(() => {
+    let active = true;
+    void api.profile().then((next) => {
+      if (!active) return;
+      setProfile(next);
+      setEmail(next.email ?? "");
+      setPhone(next.phone ?? "");
+      setDateOfBirth(next.dateOfBirth ?? "");
+    }).catch((reason) => {
+      if (!active) return;
+      if (isAuthenticationError(reason)) { expireSession(); return; }
+      setError(reason instanceof Error ? reason.message : "โหลดข้อมูลไม่สำเร็จ");
+    });
+    return () => { active = false; };
+  }, []);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(null); setFieldErrors({}); setMessage(null);
     try { const next = await api.updateProfile({ ...(environment === "local" ? { email: email || null, phone: phone || null } : {}), dateOfBirth: dateOfBirth || null }); setProfile(next); setEmail(next.email ?? ""); setPhone(next.phone ?? ""); setDateOfBirth(next.dateOfBirth ?? ""); setMessage("บันทึกข้อมูลแล้ว"); }

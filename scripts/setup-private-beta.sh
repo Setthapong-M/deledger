@@ -185,7 +185,7 @@ finish() {
 # ──────────────────────────────────────────────────────────────────────────
 
 umask 077
-TOTAL_STAGES=6
+TOTAL_STAGES=7
 
 banner "Deledger Private Beta setup"
 
@@ -199,11 +199,13 @@ stage "Runtime: private values"
 say "Values are written with mode 600 to ENV_FILE (default: .env)."
 write_env APP_ORIGIN "http://deledger.internal"
 write_env BUSINESS_TIME_ZONE "Asia/Bangkok"
-ask_secret DATABASE_URL "PostgreSQL runtime URL (web role):"
+ask_secret DATABASE_URL "PostgreSQL restricted runtime URL (deledger_web):"
+ask_secret IDENTITY_DATABASE_URL "PostgreSQL identity runtime URL (deledger_identity):"
 ask CLOUDFLARE_TEAM_DOMAIN "Cloudflare team domain (https://<team>.cloudflareaccess.com):"
 ask CLOUDFLARE_ACCESS_AUD "Access application audience:"
 ask_secret CLOUDFLARE_TUNNEL_TOKEN "Named Tunnel connector token:"
 write_env DATABASE_URL "$DATABASE_URL"
+write_env IDENTITY_DATABASE_URL "$IDENTITY_DATABASE_URL"
 write_env CLOUDFLARE_TEAM_DOMAIN "$CLOUDFLARE_TEAM_DOMAIN"
 write_env CLOUDFLARE_ACCESS_AUD "$CLOUDFLARE_ACCESS_AUD"
 write_env CLOUDFLARE_TUNNEL_TOKEN "$CLOUDFLARE_TUNNEL_TOKEN"
@@ -224,17 +226,17 @@ say "Compose reads database role passwords from files outside the repository and
 ask DELEDGER_SECRET_DIR "Directory for Compose secret files (default /etc/deledger/secrets):"
 DELEDGER_SECRET_DIR="${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}"
 write_env DELEDGER_SECRET_DIR "$DELEDGER_SECRET_DIR"
-step "Create postgres_password, web_password, maintenance_password, and operator_password in $DELEDGER_SECRET_DIR with owner/group-readable-only permissions (for example mode 0640)."
+step "Create postgres_password, web_password, and identity_password in $DELEDGER_SECRET_DIR with owner/group-readable-only permissions (for example mode 0640)."
 step "Keep the migration/operator environment outside the repository."
 step "Run: docker compose --env-file \"$ENV_FILE\" -f infra/compose.yaml config --quiet"
 step "Run: docker compose --env-file \"$ENV_FILE\" -f infra/compose.yaml up -d --build"
-pause "After PostgreSQL and web report healthy, press Enter."
+pause "After PostgreSQL, API and web report healthy, press Enter."
 
 stage "Database: migrate and catch up"
 say "The one-shot migration service reaches PostgreSQL only through the private data network and reads the admin password from its mounted secret."
 step "Run: docker compose --env-file \"$ENV_FILE\" --profile operations -f infra/compose.yaml run --rm --build migrate"
-step "Install and enable only deledger-startup-catch-up.timer from infra/systemd. Do not enable the backup or restore-verification timers."
-step "Run the startup catch-up once, then verify the pg_cron job exists."
+step "Restart the API after migration; Nest performs startup and periodic catch-up. No catch-up systemd timer is needed."
+step "Do not enable backup or restore-verification timers while BACKUP_MODE=disabled."
 pause "After migration and catch-up complete, press Enter."
 
 stage "Invite: exact email and WARP smoke test"

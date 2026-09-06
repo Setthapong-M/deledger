@@ -9,29 +9,24 @@
   "scripts": {
     "dev": "pnpm --dir web dev",
     "dev:local": "bash scripts/dev-local.sh",
-    "seed:local": "node scripts/seed-local.mjs",
-    "build": "pnpm --dir web build",
+    "seed:local": "pnpm --dir api exec tsx ../scripts/seed-local.mjs",
+    "build": "pnpm --dir api generate && pnpm --dir api build && pnpm --dir web build",
     "lint": "pnpm --dir web lint",
-    "typecheck": "pnpm --dir web typecheck",
+    "typecheck": "pnpm --dir api generate && pnpm --dir api typecheck && pnpm --dir web typecheck",
     "qc": "pnpm lint && pnpm typecheck",
-    "db:migrate": "node-pg-migrate up -m db/migrations",
-    "db:rollback": "node-pg-migrate down -m db/migrations",
+    "db:migrate": "pnpm --dir api migrate",
     "test:db": "node scripts/test-db.mjs",
-    "test:unit": "pnpm --dir web vitest run --project unit",
+    "test:unit": "pnpm --dir web vitest run --project unit && pnpm --dir api test tests/domain tests/auth",
     "test:integration": "node scripts/test-integration.mjs",
-    "test:e2e": "pnpm --dir web playwright test",
+    "test:e2e": "node scripts/test-e2e.mjs",
     "test:ops": "node scripts/test-operations.mjs",
     "test:coverage": "node scripts/test-coverage.mjs",
     "test:all": "pnpm test:unit && pnpm test:integration && pnpm test:e2e && pnpm test:ops && pnpm test:coverage",
-    "operator:user": "node scripts/operator/user.mjs",
-    "verify:release": "bash scripts/verify-release.sh"
-  },
-  "dependencies": {
-    "node-pg-migrate": "9.0.0",
-    "pg": "8.23.0"
+    "operator:user": "pnpm --dir api operator",
+    "verify:release": "bash scripts/verify-release.sh",
+    "db:generate": "pnpm --dir api generate"
   },
   "devDependencies": {
-    "@types/node": "26.4.0",
-    "@types/pg": "8.23.1"
+    "@types/node": "26.4.0"
   }
 }
