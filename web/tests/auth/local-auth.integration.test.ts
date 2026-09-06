@@ -139,6 +139,31 @@ describe("local identity and profile", () => {
     expect(denied.status).toBe(401);
   });
 
+  it("accepts loopback proxy origins while rejecting remote origins", async () => {
+    const loggedIn = await login(jsonRequest("http://localhost:60065/api/auth/login", {
+      method: "POST",
+      origin: "http://localhost:60065",
+      body: { identifier: "proxy-user@example.com" },
+    }));
+    expect(loggedIn.status).toBe(200);
+    const cookie = loggedIn.headers.get("set-cookie")!.split(";", 1)[0]!;
+
+    const remote = await logout(new Request("http://localhost:60065/api/auth/logout", {
+      method: "POST",
+      headers: { origin: "https://evil.example", "content-type": "application/json", cookie },
+      body: "{}",
+    }));
+    expect(remote.status).toBe(400);
+
+    const proxied = await logout(new Request("http://localhost:60065/api/auth/logout", {
+      method: "POST",
+      headers: { origin: "http://localhost:60065", "content-type": "application/json", cookie },
+      body: "{}",
+    }));
+    expect(proxied.status).toBe(200);
+    expect((await bootstrap(new Request("http://localhost:60065/api/bootstrap", { headers: { cookie } }))).status).toBe(401);
+  });
+
   it("rejects expired and tampered cookies without exposing a User", async () => {
     await clear();
     const owner = "00000000-0000-4000-8000-000000000011";
