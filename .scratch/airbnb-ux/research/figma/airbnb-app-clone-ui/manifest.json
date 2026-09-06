@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "1.0",
+  "source": {
+    "kind": "figma_design_file",
+    "classification": "third_party_recreation_or_clone",
+    "title": "Airbnb App Clone UI",
+    "url": "https://www.figma.com/design/LtZClzhjBrIfy0imWJnlEg/Airbnb-App-Clone-UI?t=JrZlXDk9KDBHTpDC-1",
+    "fileKey": "LtZClzhjBrIfy0imWJnlEg",
+    "publisher": "unknown",
+    "officialStatus": "not_verified",
+    "version": null,
+    "lastModified": null
+  },
+  "workspace": "/home/admin/vault/deledger",
+  "retrievedAt": "2026-09-05",
+  "timezone": "Asia/Bangkok",
+  "retrieval": {
+    "tools": [
+      "figma_get_metadata",
+      "figma_use_figma",
+      "figma_get_screenshot",
+      "figma_whoami"
+    ],
+    "readOnly": true,
+    "screenshotMaxDimension": 1800,
+    "localAssetsDownloaded": 5,
+    "mcpRateLimit": {
+      "plan": "Starter",
+      "message": "You've reached the Figma MCP tool call limit on the Starter plan.",
+      "firstBlockedOperation": "page-level screenshot after 5 successful exports",
+      "resumeHint": "Retry after the plan limit resets or use an account/plan with more Figma MCP calls."
+    },
+    "connectedUser": {
+      "handle": "Setthapong Maknoun",
+      "email": "setthapong.maknoun@gmail.com",
+      "seat": "View",
+      "planTier": "starter"
+    }
+  },
+  "scope": {
+    "requested": [
+      "all pages",
+      "screens",
+      "components",
+      "variants",
+      "styles",
+      "variables",
+      "prototype information",
+      "exportable assets"
+    ],
+    "pageDiscovery": "complete",
+    "pageLevelInventory": "complete",
+    "detailedNodeProperties": "partial",
+    "screenshots": "partial",
+    "stylesAndVariables": "blocked",
+    "prototype": "blocked",
+    "exportableAssets": "blocked"
+  },
+  "relatedResearch": [
+    "../../airbnb-web-ux.md"
+  ]
+}

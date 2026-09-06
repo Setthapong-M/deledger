@@ -1,0 +1,22 @@
+{
+  "retrievedAt": "2026-09-05",
+  "fileKey": "LtZClzhjBrIfy0imWJnlEg",
+  "sourceUrl": "https://www.figma.com/design/LtZClzhjBrIfy0imWJnlEg/Airbnb-App-Clone-UI?t=JrZlXDk9KDBHTpDC-1",
+  "calls": [
+    {"tool":"figma_get_metadata","target":"all six page IDs","status":"success","purpose":"top-level page inventory and XML overview"},
+    {"tool":"figma_use_figma","targets":["0:1","5:23","2:13","2:15","2:16","39:29883"],"status":"success","purpose":"read-only page traversal; counts and top-level node summary"},
+    {"tool":"figma_get_screenshot","target":"0:1","status":"success","localFile":"screens/0-1_cover-page.png","originalSize":"1920x960","exportedSize":"1800x900"},
+    {"tool":"figma_get_screenshot","target":"5:23","status":"success","localFile":"screens/5-23_mockup-page.png","originalSize":"2402x1209","exportedSize":"1800x906"},
+    {"tool":"figma_get_screenshot","target":"45:14021","status":"success","localFile":"screens/45-14021_icons-page.png","originalSize":"2768x603","exportedSize":"1800x432"},
+    {"tool":"figma_get_screenshot","target":"2:15","status":"success","localFile":"screens/2-15_components-page.png","originalSize":"32874x2777","exportedSize":"1800x153"},
+    {"tool":"figma_get_screenshot","target":"2:16","status":"success","localFile":"screens/2-16_ios-page.png","originalSize":"17283x32115","exportedSize":"969x1800"},
+    {"tool":"figma_get_screenshot","targets":["39:29883","45:14609","45:14631","46:14133","46:14780","46:15384","46:15406","46:20319","46:23245","46:24887","46:22614","46:23798","46:24393"],"status":"blocked","error":"Figma MCP Starter tool call limit"},
+    {"tool":"figma_get_libraries","target":"file","status":"blocked","error":"Figma MCP Starter tool call limit"},
+    {"tool":"figma_get_variable_defs","target":"representative nodes","status":"not_called_after_limit","reason":"blocked budget"},
+    {"tool":"figma_download_assets","target":"screens/icons/images","status":"not_called_after_limit","reason":"blocked budget"},
+    {"tool":"figma_whoami","target":"connected user","status":"success","result":{"handle":"Setthapong Maknoun","email":"setthapong.maknoun@gmail.com","seat":"View","planTier":"starter"}}
+  ],
+  "errors": [
+    {"code":"INVALID_ARGUMENT","message":"You've reached the Figma MCP tool call limit on the Starter plan.","source":"Figma MCP","impact":"detail exports, tokens, libraries, variables, prototype data and assets are incomplete"}
+  ]
+}

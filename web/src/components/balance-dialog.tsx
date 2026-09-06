@@ -1,5 +1,7 @@
 "use client";
 
+import { ui } from "@/components/ui-styles";
+
 import { useState, type FormEvent } from "react";
 import { Dialog } from "./dialog";
 import { MoneyField } from "./money-field";
@@ -13,9 +15,9 @@ export function BalanceDialog({ title, initialValue = "", dateLabel, onSubmit, o
     if (amount.trim() === "") { setError("กรุณากรอกยอดเงิน"); return; }
     try { await onSubmit(amount, date || undefined); onClose(); } catch (reason) { setError(reason instanceof Error ? reason.message : "บันทึกไม่สำเร็จ"); }
   }
-  return <Dialog title={title} onClose={onClose}><form className="dialog-form" onSubmit={submit}>
+  return <Dialog title={title} onClose={onClose}><form className={ui.dialogForm} onSubmit={submit}>
     <MoneyField id="dialog-amount" label="ยอดเงิน" value={amount} onChange={setAmount} error={error ?? undefined} />
-    {dateLabel ? <label className="field" htmlFor="dialog-date"><span>{dateLabel}</span><input id="dialog-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></label> : null}
-    <div className="dialog-actions"><button type="button" className="secondary-button" onClick={onClose}>ยกเลิก</button><button className="primary-button" type="submit">บันทึก</button></div>
+    {dateLabel ? <label className={ui.field} htmlFor="dialog-date"><span>{dateLabel}</span><input id="dialog-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></label> : null}
+    <div className={ui.dialogActions}><button type="button" className={ui.secondaryButton} onClick={onClose}>ยกเลิก</button><button className={ui.primaryButton} type="submit">บันทึก</button></div>
   </form></Dialog>;
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { ui } from "@/components/ui-styles";
+
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 type Preference = "system" | "light" | "dark";
@@ -57,12 +59,12 @@ export function ThemeControl() {
   }
 
   return (
-    <div className="theme-control" ref={menuRef}>
-      <button className="icon-button" type="button" aria-haspopup="menu" aria-expanded={open} aria-label={`ธีม: ${label}`} onClick={() => setOpen((value) => !value)}>
+    <div className="relative" ref={menuRef}>
+      <button className={ui.iconButton} type="button" aria-haspopup="menu" aria-expanded={open} aria-label={`ธีม: ${label}`} onClick={() => setOpen((value) => !value)}>
         <span aria-hidden="true">{resolvedDark ? "☾" : "☀"}</span>
       </button>
       {open ? (
-        <div className="theme-menu" role="menu" aria-label="เลือกธีม">
+        <div className="absolute top-[50px] right-0 z-10 min-w-[150px] rounded-xl border border-border bg-surface p-1.5 shadow-card [&_button]:grid [&_button]:min-h-[42px] [&_button]:w-full [&_button]:grid-cols-[20px_1fr] [&_button]:items-center [&_button]:rounded-lg [&_button]:border-0 [&_button]:bg-transparent [&_button]:px-2 [&_button]:py-1.5 [&_button]:text-left [&_button]:text-ink [&_button:hover]:bg-surface-muted [&_button[aria-checked=true]]:bg-surface-muted" role="menu" aria-label="เลือกธีม">
           {(["system", "light", "dark"] as const).map((value) => {
             const text = value === "system" ? "ตามระบบ" : value === "light" ? "สว่าง" : "มืด";
             return (

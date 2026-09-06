@@ -1,16 +1,17 @@
 import { test, expect } from "@playwright/test";
+import { ui } from "../src/components/ui-styles";
 import AxeBuilder from "@axe-core/playwright";
 
 test("theme preference, keyboard focus and accessibility remain available", async ({ page }) => {
   await page.route("**/api/bootstrap", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { state: "onboarding_required", month: null } }) }));
   await page.goto("/start");
-  await page.evaluate(() => {
+  await page.evaluate((primaryButton) => {
     const probe = document.createElement("button");
-    probe.className = "primary-button";
+    probe.className = primaryButton;
     probe.dataset.colorProbe = "true";
     probe.textContent = "color probe";
     document.body.append(probe);
-  });
+  }, ui.primaryButton);
   const primaryProbe = page.locator("[data-color-probe='true']");
   await expect(primaryProbe).toHaveCSS("background-color", "rgb(181, 198, 156)");
   await expect(primaryProbe).toHaveCSS("color", "rgb(38, 38, 38)");

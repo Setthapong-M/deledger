@@ -1,5 +1,7 @@
 "use client";
 
+import { ui } from "@/components/ui-styles";
+
 import { useState, type FormEvent } from "react";
 import { api, ApiClientError, isAuthenticationError, type MonthView } from "@/lib/api-client";
 import { MoneyField } from "./money-field";
@@ -29,12 +31,12 @@ export function LifecycleForm({ mode, onComplete }: { mode: "start" | "resume"; 
   }
 
   return (
-    <form className="lifecycle-form" onSubmit={submit}>
+    <form className="mt-[26px] grid gap-[18px]" onSubmit={submit}>
       {error ? <FeedbackBanner tone="warning">{error}</FeedbackBanner> : null}
       <MoneyField id="opening-balance" label="ยอดตั้งต้นที่รู้ตอนนี้" value={openingBalance} onChange={setOpeningBalance} disabled={busy} />
       <MoneyField id="income" label="รายรับของเดือนนี้" value={income} onChange={setIncome} disabled={busy} />
-      <p className="helper-text">ใส่ 0 ได้ หากเดือนไม่มีรายรับ และไม่จำเป็นต้องย้อนกรอกเดือนก่อนหน้าที่ข้อมูลขาด</p>
-      <button className="primary-button" type="submit" disabled={busy || openingBalance === "" || income === ""}>{busy ? "กำลังบันทึก…" : isResume ? "เริ่มติดตามต่อ" : "เริ่มเดือนแรก"}</button>
+      <p className={ui.helperText}>ใส่ 0 ได้ หากเดือนไม่มีรายรับ และไม่จำเป็นต้องย้อนกรอกเดือนก่อนหน้าที่ข้อมูลขาด</p>
+      <button className={ui.primaryButton} type="submit" disabled={busy || openingBalance === "" || income === ""}>{busy ? "กำลังบันทึก…" : isResume ? "เริ่มติดตามต่อ" : "เริ่มเดือนแรก"}</button>
     </form>
   );
 }

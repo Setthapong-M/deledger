@@ -18,9 +18,9 @@ export async function handleUserRoute<T>(request: Request, options: {
     const config = options.config ?? safeConfig();
     if (options.method !== "GET" && options.method !== "DELETE") {
       if (!isJsonRequest(request)) return failure({ code: "INVALID_INPUT", message: "ต้องส่งข้อมูล JSON", field: null, current: null }, 400);
-      if (request.headers.get("origin") !== config.APP_ORIGIN) return failure({ code: "INVALID_INPUT", message: "แหล่งที่มาของคำขอไม่ถูกต้อง", field: "origin", current: null }, 400);
+      if (!isAllowedOrigin(request, config)) return failure({ code: "INVALID_INPUT", message: "แหล่งที่มาของคำขอไม่ถูกต้อง", field: "origin", current: null }, 400);
     }
-    if (options.method === "DELETE" && request.headers.get("origin") !== config.APP_ORIGIN) return failure({ code: "INVALID_INPUT", message: "แหล่งที่มาของคำขอไม่ถูกต้อง", field: "origin", current: null }, 400);
+    if (options.method === "DELETE" && !isAllowedOrigin(request, config)) return failure({ code: "INVALID_INPUT", message: "แหล่งที่มาของคำขอไม่ถูกต้อง", field: "origin", current: null }, 400);
     const body = options.body ? await options.body(request) : undefined as T;
     const authConfig = config.environment === "local"
       ? { mode: "local" as const }
@@ -48,7 +48,7 @@ export function localConfigOrFailure(request: Request, method: "POST" | "PATCH")
   if (config.environment !== "local") throw new DomainError("LOCAL_AUTH_DISABLED", "ฟังก์ชันนี้เปิดเฉพาะ local environment");
   if (method === "POST" || method === "PATCH") {
     if (!isJsonRequest(request)) throw new DomainError("INVALID_INPUT", "ต้องส่งข้อมูล JSON");
-    if (request.headers.get("origin") !== config.APP_ORIGIN) throw new DomainError("INVALID_INPUT", "แหล่งที่มาของคำขอไม่ถูกต้อง", "origin");
+    if (!isAllowedOrigin(request, config)) throw new DomainError("INVALID_INPUT", "แหล่งที่มาของคำขอไม่ถูกต้อง", "origin");
   }
   return config;
 }
@@ -63,4 +63,16 @@ export function safeConfig(): AppConfig {
 
 function isJsonRequest(request: Request): boolean {
   return (request.headers.get("content-type") ?? "").split(";", 1)[0].trim().toLowerCase() === "application/json";
+}
+
+function isAllowedOrigin(request: Request, config: AppConfig): boolean {
+  const origin = request.headers.get("origin");
+  if (origin === config.APP_ORIGIN) return true;
+  if (config.environment !== "local" || origin === null) return false;
+  try {
+    const parsed = new URL(origin);
+    return parsed.protocol === "http:" && (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1");
+  } catch {
+    return false;
+  }
 }
