@@ -17,10 +17,14 @@ Deledger uses a single-context layout:
 /
 ├── CONTEXT.md
 ├── docs/adr/
-└── src/
+├── project-context/
+├── api/src/
+└── web/src/
 ```
 
 ## Use the glossary's vocabulary
+
+Use `project-context/smart_router.yml` to select engineering guidance. `CONTEXT.md` remains the sole domain glossary and `docs/adr/` the durable decision record; the context hub links to these instead of duplicating them.
 
 When output names a domain concept in an issue, decision, test, or implementation, use the term defined in `CONTEXT.md`. Do not drift to synonyms the glossary explicitly avoids.
 

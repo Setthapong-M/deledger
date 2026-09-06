@@ -1,0 +1,47 @@
+schema_version: 1
+name: Deledger
+purpose: Personal monthly income-and-expense accounting from aggregate balances
+stack:
+  frontend: [Next.js App Router, React, Tailwind CSS, TypeScript]
+  backend: [NestJS, TypeScript, Zod]
+  persistence: [Prisma, PostgreSQL]
+  private_ingress: [Cloudflare WARP, Cloudflare Access, Cloudflare Tunnel]
+version_sources:
+  toolchain: package.json
+  frontend: web/package.json
+  backend: api/package.json
+  resolved_dependencies: pnpm-lock.yaml
+  postgres: db/Dockerfile
+  deployment: infra/compose.yaml
+source_paths:
+  domain: api/src/server/domain
+  services: api/src/server/services
+  http: api/src/routes
+  controller: api/src/api.controller.ts
+  persistence: api/src/server/repositories
+  schema: api/prisma/schema.prisma
+  migrations: api/prisma/migrations
+  frontend: web/src
+  scheduler: api/src/scheduler.ts
+  operator: api/src/operator.ts
+configuration_sources:
+  local_example: .env.local.example
+  qas_example: .env.example
+  test_example: .env.test.example
+  api_validation: api/src/server/config.ts
+  frontend_validation: web/src/instrumentation.ts
+  local_stack: infra/compose.local.yaml
+  qas_stack: infra/compose.yaml
+  development_launcher: scripts/dev-local.sh
+  test_launcher: scripts/test-db.mjs
+policy_sources:
+  vocabulary: CONTEXT.md
+  topology_decision: docs/adr/0008-split-presentation-and-business-services.md
+  operations: docs/operations/operator-runbook.md
+  tracker: docs/agents/issue-tracker.md
+scope:
+  tenancy: One private Financial Boundary per User
+  business_timezone: Asia/Bangkok
+  supported_environments: [local, qas]
+  prod: Rejected at startup until separately implemented
+  external_integrations: Private ingress and JWKS verification; no message broker or bank integration
