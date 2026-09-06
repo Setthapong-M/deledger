@@ -23,11 +23,15 @@ export default defineConfig({
     video: "retain-on-failure",
     extraHTTPHeaders: { "x-deledger-test": "1" },
   },
-  webServer: {
-    command: "DELEDGER_ENV=local APP_ORIGIN=http://127.0.0.1:3014 BUSINESS_TIME_ZONE=Asia/Bangkok DATABASE_URL=postgresql://deledger_web:deledger_web@127.0.0.1:55433/deledger_local pnpm dev --hostname 127.0.0.1 --port 3014",
-    url: "http://127.0.0.1:3014",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: "NODE_ENV=test DELEDGER_ENV=local APP_ORIGIN=http://127.0.0.1:3014 BUSINESS_TIME_ZONE=Asia/Bangkok BACKUP_MODE=disabled DATABASE_URL=postgresql://deledger_web:test-web-password@127.0.0.1:55432/deledger_test IDENTITY_DATABASE_URL=postgresql://deledger_identity:test-identity-password@127.0.0.1:55432/deledger_test HOSTNAME=127.0.0.1 PORT=3015 pnpm --dir ../api exec tsx src/main.ts",
+      url: "http://127.0.0.1:3015/api/health/live", reuseExistingServer: false, timeout: 120_000,
+    },
+    {
+      command: "DELEDGER_ENV=local API_ORIGIN=http://127.0.0.1:3015 pnpm dev --hostname 127.0.0.1 --port 3014",
+      url: "http://127.0.0.1:3014", reuseExistingServer: false, timeout: 120_000,
+    },
+  ],
   projects: selectedProjects ? projects.filter((project) => selectedProjects.has(project.name)) : projects,
 });

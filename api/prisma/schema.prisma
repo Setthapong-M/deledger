@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client"
+  output = "../src/generated/prisma"
+  moduleFormat = "esm"
+  importFileExtension = "js"
+}
+datasource db {
+  provider = "postgresql"
+}
+model app_user {
+  id String @id @default(uuid()) @db.Uuid
+  created_at DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz
+  resume_required_at DateTime? @db.Timestamptz
+  date_of_birth DateTime? @db.Date
+  emails user_identity_email[]
+  phones user_identity_phone[]
+  sessions local_session[]
+  archives user_archive_period[]
+  months reporting_month[]
+}
+model user_identity_email {
+  normalized_email String @id
+  owner_id String @db.Uuid
+  linked_at DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz
+  unlinked_at DateTime? @db.Timestamptz
+  owner app_user @relation(fields: [owner_id], references: [id], onDelete: Restrict)
+}
+model user_identity_phone {
+  normalized_phone String @id
+  owner_id String @db.Uuid
+  linked_at DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz
+  unlinked_at DateTime? @db.Timestamptz
+  owner app_user @relation(fields: [owner_id], references: [id], onDelete: Restrict)
+}
+model local_session {
+  token_digest String @id
+  owner_id String @db.Uuid
+  issued_at DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz
+  expires_at DateTime @db.Timestamptz
+  revoked_at DateTime? @db.Timestamptz
+  owner app_user @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  @@index([owner_id, expires_at(sort: Desc)], map: "local_session_owner_idx")
+}
+model user_archive_period {
+  id BigInt @id @default(autoincrement())
+  owner_id String @db.Uuid
+  archived_at DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz
+  restored_at DateTime? @db.Timestamptz
+  owner app_user @relation(fields: [owner_id], references: [id], onDelete: Restrict)
+}
+model reporting_month {
+  owner_id String @db.Uuid
+  month_start DateTime @db.Date
+  tracked_from DateTime @db.Date
+  opening_source String
+  opening_balance_input Decimal? @db.Decimal(15,2)
+  income_amount Decimal? @db.Decimal(15,2)
+  ending_balance_amount Decimal? @db.Decimal(15,2)
+  closed_at DateTime? @db.Timestamptz
+  closed_by String?
+  revision BigInt @default(0)
+  created_at DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz
+  updated_at DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz
+  owner app_user @relation(fields: [owner_id], references: [id], onDelete: Restrict)
+  snapshots balance_snapshot[]
+  recurring monthly_recurring_expense[]
+  @@id([owner_id, month_start])
+  @@index([owner_id, month_start(sort: Desc)], map: "reporting_month_owner_idx")
+}
+model balance_snapshot {
+  id String @id @default(uuid()) @db.Uuid
+  owner_id String @db.Uuid
+  month_start DateTime @db.Date
+  observed_on DateTime @db.Date
+  amount Decimal @db.Decimal(15,2)
+  recorded_at DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz
+  month reporting_month @relation(fields: [owner_id, month_start], references: [owner_id, month_start], onDelete: Restrict, map: "balance_snapshot_month_fk")
+  @@index([owner_id, month_start, observed_on(sort: Desc), recorded_at(sort: Desc), id(sort: Desc)], map: "balance_snapshot_month_order_idx")
+}
+model monthly_recurring_expense {
+  owner_id String @db.Uuid
+  month_start DateTime @db.Date
+  id String @default(uuid()) @db.Uuid
+  position Int
+  name String
+  kind String
+  fixed_amount Decimal? @db.Decimal(15,2)
+  is_paused Boolean @default(false)
+  month reporting_month @relation(fields: [owner_id, month_start], references: [owner_id, month_start], onDelete: Restrict, map: "monthly_recurring_expense_month_fk")
+  detail monthly_expense_detail?
+  @@id([owner_id, month_start, id])
+}
+model monthly_expense_detail {
+  owner_id String @db.Uuid
+  month_start DateTime @db.Date
+  setup_item_id String @db.Uuid
+  confirmed_name String
+  confirmed_kind String
+  confirmed_amount Decimal @db.Decimal(15,2)
+  confirmed_at DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz
+  setup monthly_recurring_expense @relation(fields: [owner_id, month_start, setup_item_id], references: [owner_id, month_start, id], onDelete: Restrict, map: "monthly_expense_detail_setup_fk")
+  @@id([owner_id, month_start, setup_item_id])
+  @@index([owner_id, month_start], map: "monthly_expense_detail_month_idx")
+}

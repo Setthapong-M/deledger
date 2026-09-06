@@ -3,12 +3,11 @@ set -euo pipefail
 
 if [[ "$(id -u)" == "0" ]]; then
   install -d -o postgres -g postgres -m 0700 /run/deledger-secrets
-  for secret_name in postgres_password web_password maintenance_password operator_password; do
+  for secret_name in postgres_password web_password identity_password; do
     case "$secret_name" in
       postgres_password) variable=POSTGRES_PASSWORD_FILE ;;
       web_password) variable=DELEDGER_WEB_PASSWORD_FILE ;;
-      maintenance_password) variable=DELEDGER_MAINTENANCE_PASSWORD_FILE ;;
-      operator_password) variable=DELEDGER_OPERATOR_PASSWORD_FILE ;;
+      identity_password) variable=DELEDGER_IDENTITY_PASSWORD_FILE ;;
     esac
     source_path="${!variable:-}"
     [[ -n "$source_path" ]] || continue

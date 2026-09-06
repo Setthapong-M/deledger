@@ -7,6 +7,7 @@ WORKDIR /app
 FROM base AS dependencies
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY web/package.json web/package.json
+COPY api/package.json api/package.json
 RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
@@ -18,6 +19,7 @@ RUN pnpm --dir web build
 FROM node:22.23.1-bookworm-slim AS runner
 ENV NODE_ENV=production
 ENV PORT=80
+ENV HOSTNAME=0.0.0.0
 WORKDIR /app
 RUN groupadd --system --gid 1001 deledger && useradd --system --uid 1001 --gid deledger deledger
 COPY --from=builder --chown=deledger:deledger /app/web/.next/standalone ./

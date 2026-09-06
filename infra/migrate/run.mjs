@@ -9,8 +9,8 @@ if (!password) throw new Error("postgres password is empty");
 
 const databaseUrl = new URL("postgresql://postgres@postgres:5432/deledger");
 databaseUrl.password = password;
-const result = spawnSync("/app/node_modules/.bin/node-pg-migrate", ["up", "-m", "/app/db/migrations"], {
-  env: { ...process.env, DATABASE_URL: databaseUrl.toString() },
+const result = spawnSync("pnpm", ["--dir", "/app/api", "migrate"], {
+  env: { ...process.env, MIGRATION_DATABASE_URL: databaseUrl.toString(), DATABASE_URL: databaseUrl.toString() },
   stdio: "inherit",
 });
 process.exit(result.status ?? 1);

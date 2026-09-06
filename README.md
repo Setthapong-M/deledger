@@ -15,10 +15,12 @@ Cloudflare Access Email OTP
           |
 Named Cloudflare Tunnel -> Next.js App Router (web)
                               |
-                       PostgreSQL + pg_cron (db)
+                       NestJS API (api)
+                              |
+                       Prisma → PostgreSQL (db)
 ```
 
-The web server owns HTTP parsing and authentication, service modules own atomic use cases, repositories own SQL, and domain modules derive the complete Month View. PostgreSQL forced RLS is the final User-isolation boundary.
+Next.js owns the UI and forwards API requests to NestJS. NestJS owns authentication, atomic use cases, domain derivations and restart-safe calendar scheduling. Prisma owns schema, migrations and all data access. PostgreSQL forced RLS is the final User-isolation boundary.
 
 ## Development prerequisites
 
@@ -27,7 +29,7 @@ The web server owns HTTP parsing and authentication, service modules own atomic 
 - Docker Engine `29.2.1` and Docker Compose `5.0.2`
 - GitHub CLI for the requested branch/PR workflow
 
-Copy `.env.example` for local operator configuration. Use `.env.test.example` only with the disposable loopback test database. Never commit either file with real values.
+Copy `.env.example` for QAS operator configuration and `.env.local.example` for local development. Use `.env.test.example` only with the disposable loopback test database. Never commit either file with real values.
 
 ## Commands
 
@@ -50,7 +52,7 @@ ENV_FILE=.env ./scripts/setup-private-beta.sh
 
 `test:integration`, `test:ops`, and `test:coverage` create and remove the disposable loopback PostgreSQL stack automatically. Browser tests use local fixtures and never call Cloudflare or production data.
 
-For local development without Cloudflare, copy `.env.local.example` to a local env file or run `pnpm dev:local`. The command starts only the dedicated local PostgreSQL Compose service on port `55433`, runs migrations with the database administrator connection, and starts Next.js on `http://127.0.0.1:3000`. The local login accepts one email or Thai mobile number and does not request a password or OTP. Local data uses its own volume and network; the QAS stack remains under `infra/compose.yaml`.
+For local development without Cloudflare, copy `.env.local.example` to a local env file or run `pnpm dev:local`. The command starts only the dedicated local PostgreSQL Compose service on port `55433`, runs migrations with the database administrator connection, and starts Next.js on `http://127.0.0.1:3000` and NestJS on loopback port `3001`. The local login accepts one email or Thai mobile number and does not request a password or OTP. Local data uses its own volume and network; the QAS stack remains under `infra/compose.yaml`.
 
 To load deterministic demo Users without touching QAS or the disposable test database, load the local environment and run `pnpm seed:local`:
 
@@ -63,7 +65,7 @@ The seed creates an email-only User, a phone-only User and a linked User with a 
 
 The private-beta wizard is intentionally operator-driven: it does not capture the
 offline age private key, does not make Cloudflare policy changes automatically,
-and stops before readiness when the off-device backup mount is absent. Run it only
+and preserves the configured backup policy (`disabled` for the current beta). Run it only
 on the host that owns the production Docker stack, with `ENV_FILE` pointing to a
 mode-600 file outside version control.
 
@@ -73,3 +75,9 @@ mode-600 file outside version control.
 - [Executable specification](.scratch/deledger-online-mvp/spec.md)
 - [Implementation plan](.scratch/deledger-online-mvp/implementation-plan.md)
 - [Private deployment runbook](docs/operations/deploy-private-beta.md)
+
+Next.js receives only `API_ORIGIN`; database and Cloudflare credentials belong to NestJS. QAS has no published ports: Tunnel → Next on the edge network, Next → Nest on the internal app network, Nest → PostgreSQL on the internal data network. `DATABASE_URL` uses `deledger_web`; `IDENTITY_DATABASE_URL` uses the scoped `deledger_identity` role. Only migration/backup operations use the PostgreSQL administrator.
+
+The Prisma migration starts a fresh database. Existing legacy volumes are not compatible with this initial migration: inspect the Compose project, database name and volume first, and explicitly authorize replacement of the intended Deledger environment. The scripts automatically reset only the disposable loopback `deledger_test` database. They never reset local or QAS data.
+
+Nest alone joins the non-internal `api-egress` network to fetch Cloudflare JWKS over HTTPS. This network publishes no host ports and does not join the Tunnel or frontend; inbound application traffic continues through Tunnel → Next → Nest. The app and data networks remain internal.

@@ -1,5 +1,5 @@
 services:
-  web:
+  api:
     environment:
       BACKUP_TARGET: /mnt/deledger-backups
     volumes:
