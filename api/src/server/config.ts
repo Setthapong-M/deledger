@@ -42,10 +42,16 @@ export function loadConfig(environment: ConfigEnvironment = process.env): AppCon
     throw new Error("APP_ORIGIN must use a loopback host in local environment");
   }
   if (result.data.DELEDGER_ENV === "local") {
+    const name = environment.LOCAL_DATABASE_NAME ?? "deledger_local";
+    if (name.length > 63 || !/^deledger_local(?:_[a-z0-9]+)*$/.test(name)) {
+      throw new Error("LOCAL_DATABASE_NAME must be deledger_local or deledger_local_<lowercase suffix>, at most 63 characters");
+    }
     const database = new URL(result.data.DATABASE_URL);
-    const localPath = database.pathname === "/deledger_local" || (environment.NODE_ENV === "test" && database.pathname === "/deledger_test");
+    const localPath = database.pathname === `/${name}` || (environment.NODE_ENV === "test" && environment.LOCAL_DATABASE_NAME === undefined && database.pathname === "/deledger_test");
     const localDatabase = ["127.0.0.1", "localhost"].includes(database.hostname) && database.username === "deledger_web" && localPath;
-    if (!localDatabase) throw new Error("DATABASE_URL must use the deledger_web role on the local loopback /deledger_local database");
+    if (!localDatabase || database.search || database.hash) throw new Error(`DATABASE_URL must use the deledger_web role on the local loopback /${name} database without query parameters or fragments`);
+    const identity = new URL(result.data.IDENTITY_DATABASE_URL);
+    if (identity.search || identity.hash) throw new Error("IDENTITY_DATABASE_URL must not use query parameters or fragments in local mode");
   }
   if (result.data.DELEDGER_ENV === "qas" && result.data.APP_ORIGIN !== "http://deledger.internal") {
     throw new Error("APP_ORIGIN must be http://deledger.internal in QAS");

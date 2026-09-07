@@ -7,7 +7,7 @@ services:
       dockerfile: db/Dockerfile
     command: ["postgres", "-c", "hba_file=/etc/postgresql/pg_hba.conf"]
     environment:
-      POSTGRES_DB: deledger_local
+      POSTGRES_DB: ${LOCAL_DATABASE_NAME:-deledger_local}
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${LOCAL_POSTGRES_PASSWORD:-deledger-local-postgres}
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
@@ -21,7 +21,7 @@ services:
     volumes:
       - deledger_local_pgdata:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d deledger_local"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d \"$$POSTGRES_DB\""]
       interval: 2s
       timeout: 3s
       retries: 30
@@ -33,4 +33,4 @@ networks:
 
 volumes:
   deledger_local_pgdata:
-    name: ${DELEDGER_LOCAL_PGDATA_VOLUME:-deledger_local_pgdata}
+    name: ${DELEDGER_LOCAL_PGDATA_VOLUME:-${LOCAL_DATABASE_NAME:-deledger_local}_pgdata}

@@ -2,6 +2,9 @@ import { PrismaPg } from "../api/node_modules/@prisma/adapter-pg/dist/index.mjs"
 import { PrismaClient } from "../api/src/generated/prisma/client.ts";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { readFileSync } from "node:fs";
+import { parseEnv } from "node:util";
+import { localDatabaseConfiguration } from "./local-database.mjs";
 
 
 const seededUsers = [
@@ -43,18 +46,7 @@ const seededUsers = [
 ];
 
 export function localAdminDatabaseUrl(environment = process.env) {
-  const value = environment.LOCAL_ADMIN_DATABASE_URL ?? environment.DATABASE_URL;
-  if (!value) throw new Error("LOCAL_ADMIN_DATABASE_URL is required");
-  let parsed;
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw new Error("LOCAL_ADMIN_DATABASE_URL must be a valid PostgreSQL URL");
-  }
-  if (parsed.protocol !== "postgresql:" || !["127.0.0.1", "localhost"].includes(parsed.hostname) || parsed.pathname !== "/deledger_local" || parsed.username !== "postgres") {
-    throw new Error("seed-local accepts only the local postgres administrator database");
-  }
-  return value;
+  return localDatabaseConfiguration(environment).admin;
 }
 
 export async function seedLocal(client) {
@@ -86,6 +78,11 @@ export async function seedLocal(client) {
 }
 
 async function main() {
+  try {
+    Object.assign(process.env, parseEnv(readFileSync(new URL("../.env.local", import.meta.url), "utf8")));
+  } catch (error) {
+    if (!error || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") throw error;
+  }
   if (process.env.DELEDGER_ENV !== "local") throw new Error("seed-local requires DELEDGER_ENV=local");
   const client = new PrismaClient({ adapter: new PrismaPg({ connectionString: localAdminDatabaseUrl() }) });
   try {
