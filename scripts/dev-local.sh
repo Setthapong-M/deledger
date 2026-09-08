@@ -11,39 +11,16 @@ if [[ -f .env.local ]]; then
   set +a
 fi
 
-local_postgres_port="${LOCAL_POSTGRES_PORT:-55433}"
 local_web_port="${LOCAL_WEB_PORT:-3000}"
 local_api_port="${LOCAL_API_PORT:-3001}"
-local_identity_password="${LOCAL_IDENTITY_PASSWORD:-deledger-local-identity}"
-local_postgres_password="${LOCAL_POSTGRES_PASSWORD:-deledger-local-postgres}"
-local_web_password="${LOCAL_WEB_PASSWORD:-deledger-local-web}"
-local_admin_database_url="${LOCAL_ADMIN_DATABASE_URL:-postgresql://postgres:${local_postgres_password}@127.0.0.1:${local_postgres_port}/deledger_local}"
-local_web_database_url="${LOCAL_DATABASE_URL:-postgresql://deledger_web:${local_web_password}@127.0.0.1:${local_postgres_port}/deledger_local}"
-local_identity_database_url="${LOCAL_IDENTITY_DATABASE_URL:-postgresql://deledger_identity:${local_identity_password}@127.0.0.1:${local_postgres_port}/deledger_local}"
+local_database_config="$(node scripts/local-database.mjs)"
+mapfile -t local_database_values <<< "$local_database_config"
+export LOCAL_DATABASE_NAME="${local_database_values[0]}"
+local_admin_database_url="${local_database_values[1]}"
+local_web_database_url="${local_database_values[2]}"
+local_identity_database_url="${local_database_values[3]}"
+export DELEDGER_LOCAL_PGDATA_VOLUME="${local_database_values[4]}"
 compose=(docker compose -f infra/compose.local.yaml --project-name deledger_local)
-
-validate_local_database_url() {
-  local value="$1"
-  local expected_user="$2"
-  if ! node --input-type=module - "$value" "$expected_user" <<'NODE'
-const value = process.argv[2];
-const expectedUser = process.argv[3];
-try {
-  const parsed = new URL(value);
-  if (parsed.protocol !== "postgresql:" || !["127.0.0.1", "localhost"].includes(parsed.hostname) || parsed.pathname !== "/deledger_local" || parsed.username !== expectedUser) process.exit(1);
-} catch {
-  process.exit(1);
-}
-NODE
-  then
-    printf 'local development database must be %s on loopback at /deledger_local\n' "$expected_user" >&2
-    exit 1
-  fi
-}
-
-validate_local_database_url "$local_admin_database_url" postgres
-validate_local_database_url "$local_web_database_url" deledger_web
-validate_local_database_url "$local_identity_database_url" deledger_identity
 
 "${compose[@]}" up -d --build --wait
 pnpm --dir api generate
