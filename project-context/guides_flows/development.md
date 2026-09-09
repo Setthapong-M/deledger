@@ -28,6 +28,18 @@ Optional URL overrides are `LOCAL_ADMIN_DATABASE_URL` (`postgres`), `LOCAL_DATAB
 
 Compose uses the selected name for `POSTGRES_DB`, its healthcheck and the default volume `<LOCAL_DATABASE_NAME>_pgdata`. Stop the application processes before changing the name and launching again; Compose replaces the local DB container's mount while retaining the previous volume. No reset, volume deletion or data copying occurs. Switching back restores the original volume. `DELEDGER_LOCAL_PGDATA_VOLUME` remains an explicit advanced override; use it only for a volume already belonging to the selected database. Direct Compose commands should use `docker compose --env-file .env.local -f infra/compose.local.yaml ...` so the same configuration is loaded.
 
+## Test accounting dates locally
+
+After local sign-in, the system-date panel is available on application pages, including onboarding. Choose a date and acknowledge the warning, or use “กลับวันที่จริง” / “Return to real date”. The API permits dates within 24 calendar months of the real Bangkok date in either direction.
+
+The selected date is shared by every User and the scheduler in this single local API process. Moving forward can close elapsed months and create following months in the existing local database. Moving back, resetting, or restarting the API does **not** undo those writes or reopen closed months. This is not a data sandbox. API restart clears only the in-memory date override.
+
+Use the last day of a month to test Manual Close with complete, coherent inputs; use the first day of the next month to test Automatic Close with missing inputs. Session expiry, audit timestamps, operational health and birthday validation still use real time. Other tabs refresh the calendar on focus and every 30 seconds; stale financial forms must be reviewed before saving.
+
+These controls are unavailable in QAS; direct clock changes return 404 there. Production startup remains unsupported. Do not change the machine clock or point test-reset scripts at the local database.
+
+Historical onboarding can start up to 24 Reporting Months back, including the current month. History can prepend up to 24 earlier months per request, preserving existing supplied starting balances; complete past Income and Ending Balance through History. “เริ่มติดตามใหม่” / “Start fresh” is available only for an untouched current month with a missing inherited opening. It keeps earlier history and copied expense setup, and is separate from operator archive/restore.
+
 ## Demo data
 
 In another terminal, after configuring `.env.local` from the example:

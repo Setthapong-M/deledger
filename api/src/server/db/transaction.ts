@@ -6,6 +6,7 @@ import { readLocalSessionToken, resolveLocalSession } from "../auth/local.js";
 import { DomainError } from "../domain/errors.js";
 import { logOperation } from "../logging.js";
 import { catchUpOwner } from "../services/catch-up.js";
+import { assertClockRevision, withCalendarGate } from "../domain/local-calendar.js";
 
 export async function runTransaction<T>(database: typeof prisma, operation: (client: DatabaseClient) => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt++) {
@@ -27,7 +28,11 @@ export async function withDatabaseTransaction<T>(ownerId: string, requestId: str
 export async function withClient<T>(operation: (client: DatabaseClient) => Promise<T>): Promise<T> {
   return runTransaction(identityPrisma, operation);
 }
-export async function withUserTransaction<T>(request: Request, requestId: string, config: AccessJwtConfig & { mode?: "qas" } | { mode: "local" }, operation: UserTransaction<T>): Promise<T> {
+export async function withUserTransaction<T>(request: Request, requestId: string, config: AccessJwtConfig & { mode?: "qas" } | { mode: "local" }, operation: UserTransaction<T>, options: { skipCatchUp?: boolean } = {}): Promise<T> {
+  return withCalendarGate(config.mode === "local", () => userTransaction(request, requestId, config, operation, options));
+}
+
+async function userTransaction<T>(request: Request, requestId: string, config: AccessJwtConfig & { mode?: "qas" } | { mode: "local" }, operation: UserTransaction<T>, options: { skipCatchUp?: boolean }): Promise<T> {
   const startedAt = performance.now();
   const local = config.mode === "local";
   const identity = local ? null : await verifyAccessJwt(request, config).catch((error: unknown) => {
@@ -60,7 +65,8 @@ export async function withUserTransaction<T>(request: Request, requestId: string
       }
       const bound = await getBoundUser(client, resolved);
       boundOwnerId = bound.ownerId;
-      await catchUpOwner(client, bound.ownerId);
+      if (local && !options.skipCatchUp) assertClockRevision(request.headers.get("x-deledger-clock-revision"));
+      if (!options.skipCatchUp) await catchUpOwner(client, bound.ownerId);
       return operation({ client, ownerId: bound.ownerId, requestId });
     });
     logOperation({ requestId, ownerId: boundOwnerId, operation: "user_transaction", latencyMs: Math.round(performance.now() - startedAt), resultCode: "OK" });

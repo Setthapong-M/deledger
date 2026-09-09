@@ -61,7 +61,25 @@ describe("local database selection", () => {
       mkdirSync(join(directory, "bin"));
       for (const file of ["dev-local.sh", "local-database.mjs"]) copyFileSync(join(root, "scripts", file), join(directory, "scripts", file));
       writeFileSync(join(directory, ".env.local"), `DELEDGER_ENV=local\n${name ? `LOCAL_DATABASE_NAME=${name}\n` : ""}`);
-      const recorder = `#!/usr/bin/env node\nconst fs = require('node:fs'); fs.appendFileSync('calls.jsonl', JSON.stringify({ command: require('node:path').basename(process.argv[1]), args: process.argv.slice(2), name: process.env.LOCAL_DATABASE_NAME, database: process.env.DATABASE_URL, identity: process.env.IDENTITY_DATABASE_URL, migration: process.env.MIGRATION_DATABASE_URL, volume: process.env.DELEDGER_LOCAL_PGDATA_VOLUME }) + '\\n');\n`;
+      const recorder = `#!/usr/bin/env node
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+fs.appendFileSync('calls.jsonl', JSON.stringify({ command: require('node:path').basename(process.argv[1]), args, name: process.env.LOCAL_DATABASE_NAME, database: process.env.DATABASE_URL, identity: process.env.IDENTITY_DATABASE_URL, migration: process.env.MIGRATION_DATABASE_URL, volume: process.env.DELEDGER_LOCAL_PGDATA_VOLUME }) + '\\n');
+if (args[0] === '--dir' && args[2] === 'dev' && ['api', 'web'].includes(args[1])) {
+  fs.writeFileSync(args[1] + '.recorded', '');
+  const deadline = performance.now() + 5000;
+  function waitForBothChildren() {
+    if (fs.existsSync('api.recorded') && fs.existsSync('web.recorded')) return;
+    if (performance.now() >= deadline) {
+      console.error('Timed out waiting for both fake dev children to record their calls');
+      process.exitCode = 1;
+      return;
+    }
+    setTimeout(waitForBothChildren, 10);
+  }
+  waitForBothChildren();
+}
+`;
       for (const file of ["docker", "pnpm"]) writeFileSync(join(directory, "bin", file), recorder, { mode: 0o755 });
       const toBash = path => process.platform === "win32" ? execFileSync("wsl.exe", ["wslpath", "-u", path], { encoding: "utf8" }).trim() : path;
       const bashDirectory = toBash(directory);

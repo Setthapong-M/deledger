@@ -1,6 +1,11 @@
 import type { MonthView } from "./contracts.js";
 
 export type DomainErrorCode =
+  | "CLOCK_CONFLICT"
+  | "DATE_RANGE_TOO_LARGE"
+  | "HISTORY_BOUNDARY_CONFLICT"
+  | "HISTORY_RANGE_OVERLAP"
+  | "RESTART_NOT_ALLOWED"
   | "INVALID_INPUT"
   | "ACCESS_TOKEN_MISSING"
   | "ACCESS_TOKEN_INVALID"

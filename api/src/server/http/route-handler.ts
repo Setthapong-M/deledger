@@ -10,6 +10,7 @@ export type RouteContext = { requestId: string; config: AppConfig };
 export async function handleUserRoute<T>(request: Request, options: {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   config?: AppConfig;
+  skipCatchUp?: boolean;
   body?: (request: Request) => Promise<T>;
   operation: (context: Parameters<UserTransaction<unknown>>[0], body: T, route: RouteContext) => Promise<unknown>;
 }): Promise<Response> {
@@ -25,7 +26,7 @@ export async function handleUserRoute<T>(request: Request, options: {
     const authConfig = config.environment === "local"
       ? { mode: "local" as const }
       : { mode: "qas" as const, teamDomain: config.CLOUDFLARE_TEAM_DOMAIN!, audience: config.CLOUDFLARE_ACCESS_AUD! };
-    const data = await withUserTransaction(request, requestId, authConfig, (context) => options.operation(context, body, { requestId, config }));
+    const data = await withUserTransaction(request, requestId, authConfig, (context) => options.operation(context, body, { requestId, config }), { skipCatchUp: options.skipCatchUp });
     return success(data);
   } catch (error) {
     if (error instanceof DomainError) return domainFailure(error);

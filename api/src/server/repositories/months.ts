@@ -1,6 +1,6 @@
 import { Prisma } from '../../generated/prisma/client.js';
 import type { RawMonthProjection } from '../domain/month-view.js';
-import { toMonthView } from '../domain/month-view.js';
+import { deriveReconciliation, toMonthView } from '../domain/month-view.js';
 import { deriveAllowedActions } from '../domain/allowed-actions.js';
 import type { MonthView, SetupKind } from '../domain/contracts.js';
 import { currentBusinessDate, dateText, dateValue, isFinalDay, nextMonthStart, previousMonthStart } from '../domain/calendar.js';
@@ -21,6 +21,7 @@ export async function getMonthProjection(client: Prisma.TransactionClient, owner
   const spending = starting !== null && income !== null && ending !== null ? starting.plus(income).minus(ending) : null;
   const provisional = month.closed_at === null && starting !== null && income !== null && ending === null && snapshot ? starting.plus(income).minus(snapshot.amount) : null;
   return {
+    openingSource: month.opening_source as 'supplied' | 'prior_ending',
     monthStart, lifecycle: month.closed_at === null ? 'open' : 'closed', closedBy: month.closed_by as 'manual' | 'automatic' | null,
     trackedFrom: dateText(month.tracked_from), revision: month.revision.toString(), startingBalance: starting?.toFixed(2) ?? null,
     income: income?.toFixed(2) ?? null, endingBalance: ending?.toFixed(2) ?? null,
@@ -43,18 +44,18 @@ export async function getMonthView(client: Prisma.TransactionClient, ownerId: st
   const projection = await getMonthProjection(client, ownerId, monthStart);
   if (!projection) return null;
   const allowedActions = deriveAllowedActions({lifecycle:projection.lifecycle,hasStartingBalance:projection.startingBalance!==null,hasIncome:projection.income!==null,hasEndingBalance:projection.endingBalance!==null,isFinalDay:projection.isFinalDay,isArchived:projection.isArchived});
+  if (deriveReconciliation({ ...projection, lifecycle: 'closed' }).state !== 'reconciled') allowedActions.manualClose = false;
   return toMonthView({...projection,affectedMonthKeys:await getAffectedMonthKeys(client,ownerId,monthStart)},allowedActions);
 }
 
 export async function getCurrentMonthStart(client: Prisma.TransactionClient, ownerId: string): Promise<string | null> {
-  const open = await client.reporting_month.findFirst({where:{owner_id:ownerId,closed_at:null},orderBy:{month_start:'desc'}});
-  const month = open ?? await client.reporting_month.findFirst({where:{owner_id:ownerId},orderBy:{month_start:'desc'}});
+  const month = await client.reporting_month.findUnique({where:{owner_id_month_start:{owner_id:ownerId,month_start:dateValue(`${currentBusinessDate().slice(0,7)}-01`)}}});
   return month ? dateText(month.month_start) : null;
 }
 
 export async function getAffectedMonthKeys(client: Prisma.TransactionClient, ownerId: string, monthStart: string): Promise<string[]> {
   const next = await client.reporting_month.findUnique({where:{owner_id_month_start:{owner_id:ownerId,month_start:dateValue(nextMonthStart(monthStart))}}});
-  return next ? [dateText(next.month_start).slice(0,7)] : [];
+  return next?.opening_source === 'prior_ending' ? [dateText(next.month_start).slice(0,7)] : [];
 }
 
 export async function listMonthViews(client: Prisma.TransactionClient, ownerId: string): Promise<MonthView[]> {

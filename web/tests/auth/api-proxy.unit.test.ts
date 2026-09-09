@@ -2,6 +2,16 @@ import { afterEach, expect, it, vi } from "vitest";
 import { forwardApi } from "../../src/lib/server-api";
 
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+it("forwards the rendered clock token unchanged and preserves a stale-clock rejection", async () => {
+  vi.stubEnv("API_ORIGIN", "http://127.0.0.1:3001");
+  vi.stubGlobal("fetch", vi.fn(async (_url: URL, init: RequestInit) => {
+    expect(new Headers(init.headers).get("x-deledger-clock-revision")).toBe("old-boot:7");
+    return Response.json({ error: { code: "CLOCK_CONFLICT", current: null } }, { status: 409 });
+  }));
+  const response = await forwardApi(new Request("http://127.0.0.1:3000/api/months/2026-09/income", { method: "PUT", headers: { "content-type": "application/json", "x-deledger-clock-revision": "old-boot:7" }, body: JSON.stringify({ amount: "0.00", expectedRevision: "1" }) }));
+  expect(response.status).toBe(409);
+  expect(await response.json()).toEqual({ error: { code: "CLOCK_CONFLICT", current: null } });
+});
 it("forwards credentials and exact API response while discarding caller identity shortcuts", async () => {
   vi.stubEnv("API_ORIGIN", "http://127.0.0.1:3001");
   const upstream = vi.fn(async (_url: URL, init: RequestInit) => {

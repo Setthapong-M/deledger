@@ -1,12 +1,13 @@
 export type SetupKind = "fixed" | "variable";
 export type ReconciliationState = "draft" | "needs_information" | "inconsistent" | "reconciled";
-export type LifecycleState = "onboarding_required" | "resume_required" | "ready" | "closed_until_boundary";
+export type LifecycleState = "onboarding_required" | "resume_required" | "ready" | "closed_until_boundary" | "simulation_outside_tracking";
 
 export type MonthView = {
   month: string;
   lifecycle: "open" | "closed";
   closedBy: "manual" | "automatic" | null;
   trackedFrom: string;
+  openingSource: "supplied" | "prior_ending";
   isPartial: boolean;
   revision: string;
   summary: {
@@ -47,7 +48,15 @@ export type MonthView = {
   affectedMonthKeys: string[];
 };
 
-export type Bootstrap = { state: LifecycleState; month: MonthView | null };
+export type Bootstrap = { state: LifecycleState; month: MonthView | null; businessDate: string };
+export type Calendar = { businessDate: string; realDate: string; mode: "real" | "simulated"; canSimulate: boolean; clockRevision: string | null; minDate: string; maxDate: string };
+export type TrackingOptions = {
+  businessDate: string; earliestMonth: string | null; earliestRevision: string | null;
+  prepend: { allowed: boolean; reason: string | null; minDate: string | null; maxDate: string | null };
+  restart: { allowed: boolean; reason: string | null; month: string | null; expectedRevision: string | null; minDate: string | null; maxDate: string | null };
+};
+export type TrackingStart = { startDate: string; openingBalance: string; income: string };
+const clockHeaders = (revision?: string | null): Record<string, string> => revision == null ? {} : { "x-deledger-clock-revision": revision };
 export type AuthMode = { environment: "local" | "qas" | "prod" };
 export type UserProfile = { email: string | null; phone: string | null; dateOfBirth: string | null };
 export type HistoryEntry =
@@ -79,15 +88,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: { accept: "application/json", ...(init?.body ? { "content-type": "application/json" } : {}), ...init?.headers },
     credentials: "same-origin",
+    cache: "no-store",
   });
   const payload = (await response.json().catch(() => null)) as { data?: T; error?: { code: string; message: string; current?: MonthView | null; field?: string | null } } | null;
   if (!response.ok || !payload?.data) {
+    if (payload?.error?.code === "CLOCK_CONFLICT") window.dispatchEvent(new Event("deledger-calendar-refresh"));
     throw new ApiClientError(response.status, payload?.error ?? { code: "INTERNAL_ERROR", message: "เกิดข้อผิดพลาดภายในระบบ" });
   }
   return payload.data;
 }
 
 export const api = {
+  calendar: () => request<Calendar>("/api/calendar"),
+  setClock: (date: string | null, expectedClockRevision: string) => request<Calendar>("/api/local/clock", { method: "PATCH", body: JSON.stringify({ date, expectedClockRevision, acknowledged: true }) }),
+  trackingOptions: () => request<TrackingOptions>("/api/tracking/options"),
+  backfill: (payload: TrackingStart & { expectedEarliestMonth: string; expectedEarliestRevision: string }, clock?: string | null) => request<{ month: MonthView; createdMonthKeys: string[]; affectedMonthKeys: string[] }>("/api/months/backfill", { method: "POST", headers: clockHeaders(clock), body: JSON.stringify(payload) }),
+  restart: (month: string, payload: TrackingStart & { expectedRevision: string }, clock?: string | null) => request<MonthView>(`/api/months/${month}/restart`, { method: "POST", headers: clockHeaders(clock), body: JSON.stringify(payload) }),
   authMode: () => request<AuthMode>("/api/auth/mode"),
   login: (identifier: string) => request<{ authenticated: true }>("/api/auth/login", { method: "POST", body: JSON.stringify({ identifier }) }),
   logout: () => request<{ authenticated: false }>("/api/auth/logout", { method: "POST", body: JSON.stringify({}) }),
@@ -97,17 +113,17 @@ export const api = {
   current: () => request<Bootstrap>("/api/months/current"),
   month: (month: string) => request<MonthView>(`/api/months/${encodeURIComponent(month)}`),
   history: (before?: string) => request<HistoryEntry[]>(`/api/months${before ? `?before=${encodeURIComponent(before)}` : ""}`),
-  onboarding: (payload: { openingBalance: string; income: string }) => request<MonthView>("/api/onboarding", { method: "POST", body: JSON.stringify(payload) }),
-  resume: (payload: { openingBalance: string; income: string }) => request<MonthView>("/api/resume", { method: "POST", body: JSON.stringify(payload) }),
-  income: (month: string, amount: string, revision: string) => request<MonthView>(`/api/months/${month}/income`, { method: "PUT", body: JSON.stringify({ amount, expectedRevision: revision }) }),
-  endingBalance: (month: string, amount: string, revision: string) => request<MonthView>(`/api/months/${month}/ending-balance`, { method: "PUT", body: JSON.stringify({ amount, expectedRevision: revision }) }),
-  snapshot: (month: string, observedOn: string, amount: string, revision: string) => request<MonthView>(`/api/months/${month}/snapshots`, { method: "POST", body: JSON.stringify({ observedOn, amount, expectedRevision: revision }) }),
-  addSetup: (month: string, payload: { name: string; kind: SetupKind; fixedAmount: string | null; expectedRevision: string }) => request<MonthView>(`/api/months/${month}/recurring-expenses`, { method: "POST", body: JSON.stringify(payload) }),
-  updateSetup: (month: string, id: string, payload: Record<string, unknown>) => request<MonthView>(`/api/months/${month}/recurring-expenses/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
-  reorderSetup: (month: string, orderedIds: string[], revision: string) => request<MonthView>(`/api/months/${month}/recurring-expenses/order`, { method: "PUT", body: JSON.stringify({ orderedIds, expectedRevision: revision }) }),
-  confirmDetail: (month: string, id: string, amount: string | undefined, revision: string) => request<MonthView>(`/api/months/${month}/details/${id}`, { method: "PUT", body: JSON.stringify({ ...(amount === undefined ? {} : { amount }), expectedRevision: revision }) }),
-  cancelDetail: (month: string, id: string, revision: string) => request<MonthView>(`/api/months/${month}/details/${id}?expectedRevision=${encodeURIComponent(revision)}`, { method: "DELETE" }),
-  close: (month: string, revision: string) => request<MonthView>(`/api/months/${month}/close`, { method: "POST", body: JSON.stringify({ expectedRevision: revision }) }),
+  onboarding: (payload: { openingBalance: string; income: string; startDate?: string }, clock?: string | null) => request<MonthView>("/api/onboarding", { headers: clockHeaders(clock), method: "POST", body: JSON.stringify(payload) }),
+  resume: (payload: { openingBalance: string; income: string }, clock?: string | null) => request<MonthView>("/api/resume", { headers: clockHeaders(clock), method: "POST", body: JSON.stringify(payload) }),
+  income: (month: string, amount: string, revision: string, clock?: string | null) => request<MonthView>(`/api/months/${month}/income`, { headers: clockHeaders(clock), method: "PUT", body: JSON.stringify({ amount, expectedRevision: revision }) }),
+  endingBalance: (month: string, amount: string, revision: string, clock?: string | null) => request<MonthView>(`/api/months/${month}/ending-balance`, { headers: clockHeaders(clock), method: "PUT", body: JSON.stringify({ amount, expectedRevision: revision }) }),
+  snapshot: (month: string, observedOn: string, amount: string, revision: string, clock?: string | null) => request<MonthView>(`/api/months/${month}/snapshots`, { headers: clockHeaders(clock), method: "POST", body: JSON.stringify({ observedOn, amount, expectedRevision: revision }) }),
+  addSetup: (month: string, payload: { name: string; kind: SetupKind; fixedAmount: string | null; expectedRevision: string }, clock?: string | null) => request<MonthView>(`/api/months/${month}/recurring-expenses`, { headers: clockHeaders(clock), method: "POST", body: JSON.stringify(payload) }),
+  updateSetup: (month: string, id: string, payload: Record<string, unknown>, clock?: string | null) => request<MonthView>(`/api/months/${month}/recurring-expenses/${id}`, { headers: clockHeaders(clock), method: "PATCH", body: JSON.stringify(payload) }),
+  reorderSetup: (month: string, orderedIds: string[], revision: string, clock?: string | null) => request<MonthView>(`/api/months/${month}/recurring-expenses/order`, { headers: clockHeaders(clock), method: "PUT", body: JSON.stringify({ orderedIds, expectedRevision: revision }) }),
+  confirmDetail: (month: string, id: string, amount: string | undefined, revision: string, clock?: string | null) => request<MonthView>(`/api/months/${month}/details/${id}`, { headers: clockHeaders(clock), method: "PUT", body: JSON.stringify({ ...(amount === undefined ? {} : { amount }), expectedRevision: revision }) }),
+  cancelDetail: (month: string, id: string, revision: string, clock?: string | null) => request<MonthView>(`/api/months/${month}/details/${id}?expectedRevision=${encodeURIComponent(revision)}`, { headers: clockHeaders(clock), method: "DELETE" }),
+  close: (month: string, revision: string, clock?: string | null) => request<MonthView>(`/api/months/${month}/close`, { headers: clockHeaders(clock), method: "POST", body: JSON.stringify({ expectedRevision: revision }) }),
 };
 
 export function isMonthView(value: MonthView | Bootstrap): value is MonthView {

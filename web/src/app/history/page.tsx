@@ -4,7 +4,14 @@ import { ui } from "@/components/ui-styles";
 
 import { AppShell } from "@/components/app-shell";
 import { HistoryExplorer } from "@/components/history-explorer";
+import { useCopy, type Messages } from "@/lib/i18n";
+
+const copy = {
+  title: { th: "ย้อนหลัง", en: "History" },
+  description: { th: "ดูยอดเงินและรายจ่ายในแต่ละเดือน", en: "Your balances and spending, month by month." },
+} satisfies Messages;
 
 export default function HistoryPage() {
-  return <AppShell><div className={ui.pageHeading}><div><p className={ui.eyebrow}>มองย้อนกลับไป</p><h1>ประวัติรายเดือน</h1><p className={`${ui.helperText} mb-0`}>ยอดเงินและสถานะของแต่ละเดือน อยู่ด้วยกันที่นี่</p></div></div><HistoryExplorer /></AppShell>;
+  const { t } = useCopy(copy);
+  return <AppShell><div className={ui.pageHeading}><div><h1>{t("title")}</h1><p className={`${ui.helperText} mb-0`}>{t("description")}</p></div></div><HistoryExplorer /></AppShell>;
 }

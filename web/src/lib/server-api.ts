@@ -1,4 +1,4 @@
-const forwardedHeaders = ["accept", "content-type", "cookie", "origin", "cf-access-jwt-assertion", "x-request-id"];
+const forwardedHeaders = ["accept", "content-type", "cookie", "origin", "cf-access-jwt-assertion", "x-request-id", "x-deledger-clock-revision"];
 
 export async function forwardApi(request: Request): Promise<Response> {
   try {

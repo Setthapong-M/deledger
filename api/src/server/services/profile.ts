@@ -1,6 +1,7 @@
 import type { DatabaseClient } from "../db/pool.js";
 import { lockOwner } from "../db/rls.js";
-import { currentBusinessDate } from "../domain/calendar.js";
+import { businessDate } from "../domain/calendar.js";
+import { now } from "../domain/clock.js";
 import { DomainError } from "../domain/errors.js";
 import { normalizeIdentifier } from "../auth/local.js";
 
@@ -77,7 +78,7 @@ function normalizeDate(value: string | null | undefined, changed: boolean): stri
   if (!changed || value === null || value === undefined || value === "") return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new DomainError("INVALID_INPUT", "วันเกิดต้องเป็น YYYY-MM-DD", "dateOfBirth");
   const parsed = new Date(`${value}T00:00:00Z`);
-  if (Number.isNaN(parsed.valueOf()) || parsed.toISOString().slice(0, 10) !== value || value > currentBusinessDate()) throw new DomainError("INVALID_INPUT", "วันเกิดไม่ถูกต้อง", "dateOfBirth");
+  if (Number.isNaN(parsed.valueOf()) || parsed.toISOString().slice(0, 10) !== value || value > businessDate(now())) throw new DomainError("INVALID_INPUT", "วันเกิดไม่ถูกต้อง", "dateOfBirth");
   return value;
 }
 

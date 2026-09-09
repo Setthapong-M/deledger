@@ -29,8 +29,16 @@ The calendar month whose income, expenses, and balance change are summarized tog
 _Avoid_: Spending cycle, card cycle
 
 **Partial Month**:
-A Reporting Month whose tracked interval begins after the first calendar day, either when tracking starts for the first time or resumes after a Tracking Gap.
+A Reporting Month whose tracked interval begins after the first calendar day, when tracking first starts, resumes after a Tracking Gap, or begins a new Tracking Segment.
 _Avoid_: Incomplete month, backfilled month
+
+**Tracking Segment**:
+A continuous sequence of Reporting Months beginning with a supplied Starting Balance, followed by months whose Starting Balance comes from the preceding Ending Balance. A later supplied start marks an independent segment whose Starting Balance does not change when earlier months are corrected.
+_Avoid_: Bank account, archive period, separate ledger
+
+**Tracking Restart**:
+A User's deliberate start of an independent Tracking Segment in the current Reporting Month, keeping earlier records without requiring their missing inputs to be completed.
+_Avoid_: Forced close, data reset, archival, Tracking Gap
 
 **Tracking Gap**:
 An interval while a User remains archived across a calendar boundary; no Reporting Months are created and no balance continuity is inferred across it.

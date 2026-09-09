@@ -48,7 +48,7 @@ async function login() {
 it("authenticates, onboards, writes and reports conflicts over real HTTP", async () => {
   setBusinessClock(() => new Date("2026-08-31T10:00:00Z"));
   const cookie = await login();
-  expect(await (await send("/bootstrap", "GET", undefined, cookie)).json()).toEqual({ data: { state: "onboarding_required", month: null } });
+  expect(await (await send("/bootstrap", "GET", undefined, cookie)).json()).toEqual({ data: { state: "onboarding_required", month: null, businessDate: "2026-08-31" } });
   const created = await send("/onboarding", "POST", { openingBalance: "1000.01", income: "200.02" }, cookie);
   expect(created.status).toBe(200);
   const { data: month } = await created.json();

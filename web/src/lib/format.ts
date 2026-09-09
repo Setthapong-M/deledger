@@ -6,13 +6,13 @@ export function formatMoney(value: string | null): string {
   return value.startsWith("-") ? `−${formatted}` : formatted;
 }
 
-export function formatMonth(month: string): string {
+export function formatMonth(month: string, locale: "th" | "en" = "th"): string {
   const [year, monthNumber] = month.split("-").map(Number);
   if (!year || !monthNumber) return month;
-  return new Intl.DateTimeFormat("th-TH", { month: "long", year: "numeric" }).format(new Date(Date.UTC(year, monthNumber - 1, 1)));
+  return new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en-GB", { month: "long", year: "numeric", timeZone: "Asia/Bangkok" }).format(new Date(Date.UTC(year, monthNumber - 1, 1)));
 }
 
-export function formatDate(date: string | null): string {
+export function formatDate(date: string | null, locale: "th" | "en" = "th"): string {
   if (!date) return "—";
-  return new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeZone: "Asia/Bangkok" }).format(new Date(`${date}T00:00:00+07:00`));
+  return new Intl.DateTimeFormat(locale === "th" ? "th-TH" : "en-GB", { dateStyle: "medium", timeZone: "Asia/Bangkok" }).format(new Date(`${date}T00:00:00+07:00`));
 }

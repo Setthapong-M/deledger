@@ -7,6 +7,9 @@ const monthKey = z.string().regex(/^\d{4}-(?:0[1-9]|1[0-2])$/, "เดือน�
 const uuid = z.string().uuid();
 
 export const lifecycleSchema = z.object({ openingBalance: decimal, income: decimal }).strict();
+export const onboardingSchema = lifecycleSchema.extend({ startDate: isoDate.optional() }).strict();
+export const backfillSchema = lifecycleSchema.extend({ startDate: isoDate, expectedEarliestMonth: monthKey, expectedEarliestRevision: revision }).strict();
+export const restartSchema = lifecycleSchema.extend({ startDate: isoDate, expectedRevision: revision }).strict();
 export const incomeSchema = z.object({ amount: decimal, expectedRevision: revision }).strict();
 export const endingBalanceSchema = z.object({ amount: decimal, expectedRevision: revision }).strict();
 export const snapshotSchema = z.object({ observedOn: isoDate, amount: decimal, expectedRevision: revision }).strict();
