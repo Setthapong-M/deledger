@@ -1,4 +1,5 @@
 import { now } from "./clock.js";
+import { effectiveBusinessDate } from "./local-calendar.js";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_PATTERN = /^\d{4}-(?:0[1-9]|1[0-2])$/;
 
@@ -68,5 +69,5 @@ export function businessDate(instant: Date): string {
 }
 
 export function currentBusinessDate(): string {
-  return businessDate(now());
+  return effectiveBusinessDate(businessDate(now()));
 }

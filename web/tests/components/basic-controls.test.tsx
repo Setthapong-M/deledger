@@ -16,7 +16,7 @@ describe("basic controls", () => {
   it("communicates each reconciliation state with text and a symbol", () => {
     for (const state of ["draft", "needs_information", "inconsistent", "reconciled"] as const) {
       const { unmount } = render(<StatusBadge state={state} partial={state === "draft"} />);
-      expect(screen.getByText(state === "draft" ? "กำลังกรอก" : state === "needs_information" ? "ข้อมูลไม่ครบ" : state === "inconsistent" ? "ยอดไม่สอดคล้อง" : "ตรวจสอบแล้ว")).toBeInTheDocument();
+      expect(screen.getByText(state === "draft" ? "กำลังกรอก" : state === "needs_information" ? "ข้อมูลไม่ครบ" : state === "inconsistent" ? "ยอดไม่ตรงกัน" : "ยอดตรงกัน")).toBeInTheDocument();
       unmount();
     }
   });

@@ -10,6 +10,7 @@ export function failure(error: { code: DomainErrorCode; message: string; field?:
 }
 
 export function statusForCode(code: DomainErrorCode): number {
+  if (["CLOCK_CONFLICT", "HISTORY_BOUNDARY_CONFLICT", "HISTORY_RANGE_OVERLAP", "RESTART_NOT_ALLOWED"].includes(code)) return 409;
   if (code === "ACCESS_TOKEN_MISSING" || code === "ACCESS_TOKEN_INVALID" || code === "SESSION_INVALID") return 401;
   if (code === "LOCAL_AUTH_DISABLED") return 403;
   if (code === "USER_NOT_INVITED" || code === "USER_ARCHIVED" || code === "PROFILE_CONTACT_READ_ONLY") return 403;

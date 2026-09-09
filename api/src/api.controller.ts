@@ -21,9 +21,39 @@ import * as historyRoute from "./routes/months/route.js";
 import * as onboardingRoute from "./routes/onboarding/route.js";
 import * as profileRoute from "./routes/profile/route.js";
 import * as resumeRoute from "./routes/resume/route.js";
+import * as calendarRoute from "./routes/calendar/route.js";
+import * as clockRoute from "./routes/local/clock/route.js";
+import * as trackingRoute from "./routes/tracking/options/route.js";
+import * as backfillRoute from "./routes/months/backfill/route.js";
+import * as restartRoute from "./routes/months/[month]/restart/route.js";
 
 @Controller("api")
 export class ApiController {
+  @Get("calendar")
+  async calendarGet(@Req() req: ExpressRequest, @Res() res: ExpressResponse): Promise<void> {
+    await serve(req, res, request => calendarRoute.GET(request));
+  }
+
+  @Patch("local/clock")
+  async clockPatch(@Req() req: ExpressRequest, @Res() res: ExpressResponse): Promise<void> {
+    await serve(req, res, request => clockRoute.PATCH(request));
+  }
+
+  @Get("tracking/options")
+  async trackingGet(@Req() req: ExpressRequest, @Res() res: ExpressResponse): Promise<void> {
+    await serve(req, res, request => trackingRoute.GET(request));
+  }
+
+  @Post("months/backfill")
+  async backfillPost(@Req() req: ExpressRequest, @Res() res: ExpressResponse): Promise<void> {
+    await serve(req, res, request => backfillRoute.POST(request));
+  }
+
+  @Post("months/:month/restart")
+  async restartPost(@Req() req: ExpressRequest, @Res() res: ExpressResponse, @Param() params: Record<string, string>): Promise<void> {
+    await serve(req, res, request => restartRoute.POST(request, { params: Promise.resolve({ month: params.month }) }));
+  }
+
   @Post("auth/login")
   async loginPost(@Req() req: ExpressRequest, @Res() res: ExpressResponse): Promise<void> {
     await serve(req, res, request => loginRoute.POST(request));

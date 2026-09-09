@@ -2,18 +2,33 @@ import { lockOwner } from "../db/rls.js";
 import type { Prisma } from '../../generated/prisma/client.js';
 import { DomainError } from '../domain/errors.js';
 import { parseMoney } from '../domain/money.js';
-import { currentBusinessDate, dateValue } from '../domain/calendar.js';
+import { assertIsoDate, businessDate, currentBusinessDate, dateValue, nextMonthStart } from '../domain/calendar.js';
+import { catchUpOwner } from './catch-up.js';
 import { getMonthView } from '../repositories/months.js';
 import type { MonthView } from '../domain/contracts.js';
 
 export type LifecycleInput = { openingBalance: string; income: string };
 
-export async function startOnboarding(client: Prisma.TransactionClient, ownerId: string, input: LifecycleInput): Promise<MonthView> {
+export async function startOnboarding(client: Prisma.TransactionClient, ownerId: string, input: LifecycleInput & { startDate?: string }): Promise<MonthView> {
   const openingBalance = parseMoney(input.openingBalance);
   const income = parseMoney(input.income);
+  const today = currentBusinessDate();
+  const startDate = input.startDate ?? today;
+  try { assertIsoDate(startDate); } catch { throw new DomainError('INVALID_INPUT', 'วันที่เริ่มไม่ถูกต้อง', 'startDate'); }
+  if (startDate > today) throw new DomainError('INVALID_INPUT', 'วันเริ่มต้องไม่เกินวันที่ระบบ', 'startDate');
+  let count = 0;
+  for (let month = `${startDate.slice(0, 7)}-01`; month <= today; month = nextMonthStart(month)) {
+    if (++count > 24) throw new DomainError('DATE_RANGE_TOO_LARGE', 'เริ่มติดตามได้ไม่เกิน 24 เดือนต่อครั้ง', 'startDate');
+  }
   await lockOwner(client,ownerId);
+  const user = await client.app_user.findUnique({ where: { id: ownerId } });
+  if (!user) throw new DomainError('USER_NOT_INVITED', 'ไม่พบบัญชีผู้ใช้');
+  if (await client.user_archive_period.findFirst({ where: { owner_id: ownerId, restored_at: null } })) throw new DomainError('USER_ARCHIVED', 'บัญชีนี้ถูกพักใช้งาน');
+  if (user.resume_required_at !== null) throw new DomainError('IDENTITY_CONFLICT', 'บัญชีนี้ต้องเริ่มติดตามหลังการคืนสถานะ');
   if (await client.reporting_month.findFirst({where:{owner_id:ownerId}})) throw new DomainError('IDENTITY_CONFLICT','บัญชีนี้เริ่มต้นแล้ว');
-  return createSuppliedMonth(client,ownerId,openingBalance,income);
+  await createSuppliedMonth(client,ownerId,openingBalance,income,startDate);
+  await catchUpOwner(client, ownerId);
+  return (await getMonthView(client, ownerId, `${today.slice(0, 7)}-01`))!;
 }
 
 export async function resumeTracking(client: Prisma.TransactionClient, ownerId: string, input: LifecycleInput): Promise<MonthView> {
@@ -23,6 +38,10 @@ export async function resumeTracking(client: Prisma.TransactionClient, ownerId: 
   const user=await client.app_user.findUnique({where:{id:ownerId}});
   if(!user) throw new DomainError('USER_NOT_INVITED','ไม่พบบัญชีผู้ใช้');
   if(user.resume_required_at===null) throw new DomainError('IDENTITY_CONFLICT','ยังไม่มีช่วงที่ต้องเริ่มติดตามใหม่');
+  const today = currentBusinessDate();
+  const archives = await client.user_archive_period.findMany({ where: { owner_id: ownerId } });
+  if (archives.some(period => period.restored_at === null)) throw new DomainError('USER_ARCHIVED', 'บัญชีนี้ถูกพักใช้งาน');
+  if (today < businessDate(user.resume_required_at) || archives.some(period => period.restored_at !== null && today < businessDate(period.restored_at))) throw new DomainError('INVALID_INPUT', 'วันที่ระบบอยู่ก่อนวันคืนสถานะหรือในช่วงหยุดติดตาม');
   const monthStart=`${currentBusinessDate().slice(0,7)}-01`;
   if(await client.reporting_month.findUnique({where:{owner_id_month_start:{owner_id:ownerId,month_start:dateValue(monthStart)}}})) throw new DomainError('IDENTITY_CONFLICT','เดือนนี้มีข้อมูลอยู่แล้ว');
   const source=await client.reporting_month.findFirst({where:{owner_id:ownerId},orderBy:{month_start:'desc'}});
@@ -32,8 +51,7 @@ export async function resumeTracking(client: Prisma.TransactionClient, ownerId: 
   return (await getMonthView(client,ownerId,monthStart))!;
 }
 
-async function createSuppliedMonth(client: Prisma.TransactionClient,ownerId:string,openingBalance:string,income:string):Promise<MonthView> {
-  const businessDate=currentBusinessDate();
+async function createSuppliedMonth(client: Prisma.TransactionClient,ownerId:string,openingBalance:string,income:string,businessDate = currentBusinessDate()):Promise<MonthView> {
   const monthStart=`${businessDate.slice(0,7)}-01`;
   await client.reporting_month.create({data:{owner_id:ownerId,month_start:dateValue(monthStart),tracked_from:dateValue(businessDate),opening_source:'supplied',opening_balance_input:openingBalance,income_amount:income}});
   const view=await getMonthView(client,ownerId,monthStart);

@@ -1,12 +1,21 @@
 "use client";
 
+import { Icon } from "./icon";
+
 import { ui } from "@/components/ui-styles";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useRef, type ReactNode } from "react";
+import { useCopy, type Messages } from "@/lib/i18n";
+
+const copy = {
+  close: { th: "ปิดหน้าต่าง", en: "Close dialog" },
+} satisfies Messages;
 
 export function Dialog({ title, description, children, onClose, labelledBy = "dialog-title" }: { title: string; description?: string; children: ReactNode; onClose: () => void; labelledBy?: string }) {
+  const { t } = useCopy(copy);
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
+  const closeFromKeyboard = useEffectEvent(onClose);
 
   useEffect(() => {
     restoreRef.current = document.activeElement as HTMLElement | null;
@@ -16,7 +25,7 @@ export function Dialog({ title, description, children, onClose, labelledBy = "di
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        closeFromKeyboard();
         return;
       }
       if (event.key !== "Tab" || !panel) return;
@@ -37,14 +46,14 @@ export function Dialog({ title, description, children, onClose, labelledBy = "di
       document.removeEventListener("keydown", onKeyDown);
       restoreRef.current?.focus();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="fixed inset-0 z-20 grid place-items-center bg-[rgba(23,23,23,0.65)] p-[18px] mobile:p-3" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="max-h-[min(90dvh,800px)] w-full max-w-[540px] overflow-auto overscroll-contain rounded-3xl border border-border bg-surface p-7 text-ink shadow-card mobile:max-h-[calc(100dvh-24px)] mobile:p-[22px]" ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={labelledBy} aria-describedby={description ? `${labelledBy}-description` : undefined}>
         <div className="flex items-start justify-between gap-4 [&_h2]:m-0 [&_p]:mt-2 [&_p]:mr-0 [&_p]:mb-0 [&_p]:ml-0 [&_p]:text-muted-ink">
           <div><h2 id={labelledBy}>{title}</h2>{description ? <p id={`${labelledBy}-description`}>{description}</p> : null}</div>
-          <button type="button" className={ui.iconButton} aria-label="ปิดหน้าต่าง" onClick={onClose}>×</button>
+          <button type="button" className={ui.iconButton} aria-label={t("close")} title={t("close")} onClick={onClose}><Icon name="close" /></button>
         </div>
         {children}
       </div>

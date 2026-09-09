@@ -1,5 +1,6 @@
 import { identityPrisma } from "./server/db/pool.js";
 import { catchUpOwner } from "./server/services/catch-up.js";
+import { withCalendarGate } from "./server/domain/local-calendar.js";
 
 const intervalMs = 60_000;
 let lastSuccess = 0;
@@ -10,7 +11,7 @@ export async function runScheduledCatchUp(): Promise<void> {
   running = (async () => {
     const owners = await identityPrisma.app_user.findMany({ select: { id: true } });
     for (const owner of owners) {
-      await identityPrisma.$transaction(client => catchUpOwner(client, owner.id), { timeout: 60_000 });
+      await withCalendarGate(process.env.DELEDGER_ENV === "local", () => identityPrisma.$transaction(client => catchUpOwner(client, owner.id), { timeout: 60_000 }));
     }
     lastSuccess = Date.now();
   })();

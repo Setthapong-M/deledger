@@ -5,6 +5,7 @@ import { parseMoney } from "./money.js";
 
 export type RawMonthProjection = {
   monthStart: string;
+  openingSource: "supplied" | "prior_ending";
   lifecycle: "open" | "closed";
   closedBy: "manual" | "automatic" | null;
   trackedFrom: string;
@@ -62,6 +63,7 @@ export function toMonthView(projection: RawMonthProjection, allowedActions: Mont
   const reconciliation = deriveReconciliation(projection);
   return {
     month: monthKeyFromStart(projection.monthStart) as MonthView["month"],
+    openingSource: projection.openingSource,
     lifecycle: projection.lifecycle,
     closedBy: projection.closedBy,
     trackedFrom: projection.trackedFrom,

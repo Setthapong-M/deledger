@@ -10,6 +10,7 @@ export type SetupKind = "fixed" | "variable";
 
 export type MonthView = {
   month: MonthKey;
+  openingSource: "supplied" | "prior_ending";
   lifecycle: "open" | "closed";
   closedBy: "manual" | "automatic" | null;
   trackedFrom: string;
@@ -57,6 +58,7 @@ export type MonthView = {
 };
 
 export type LifecycleState =
+  | "simulation_outside_tracking"
   | "onboarding_required"
   | "resume_required"
   | "ready"

@@ -1,8 +1,20 @@
 "use client";
 
+import { Icon } from "./icon";
+
 import { ui } from "@/components/ui-styles";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+
+import { useCopy, type Messages } from "@/lib/i18n";
+
+const copy = {
+  system: { th: "ตามระบบ", en: "System" },
+  light: { th: "สว่าง", en: "Light" },
+  dark: { th: "มืด", en: "Dark" },
+  theme: { th: "ธีม: {name}", en: "Theme: {name}" },
+  choose: { th: "เลือกธีม", en: "Choose a theme" },
+} satisfies Messages;
 
 type Preference = "system" | "light" | "dark";
 
@@ -15,6 +27,7 @@ const clientSnapshot = () => true;
 const serverSnapshot = () => false;
 
 export function ThemeControl() {
+  const { t } = useCopy(copy);
   const hydrated = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
   const [preference, setPreference] = useState<Preference>(() => {
     if (typeof document === "undefined") return "system";
@@ -44,7 +57,7 @@ export function ThemeControl() {
 
   const displayedPreference = hydrated ? preference : "system";
   const resolvedDark = hydrated && (preference === "dark" || (preference === "system" && systemDark));
-  const label = displayedPreference === "system" ? `ตามระบบ (${resolvedDark ? "มืด" : "สว่าง"})` : displayedPreference === "dark" ? "มืด" : "สว่าง";
+  const label = displayedPreference === "system" ? `${t("system")} (${t(resolvedDark ? "dark" : "light")})` : t(displayedPreference);
 
   function choose(next: Preference) {
     setPreference(next);
@@ -60,16 +73,16 @@ export function ThemeControl() {
 
   return (
     <div className="relative" ref={menuRef}>
-      <button className={ui.iconButton} type="button" aria-haspopup="menu" aria-expanded={open} aria-label={`ธีม: ${label}`} onClick={() => setOpen((value) => !value)}>
-        <span aria-hidden="true">{resolvedDark ? "☾" : "☀"}</span>
+      <button className={ui.iconButton} type="button" aria-haspopup="menu" aria-expanded={open} aria-label={t("theme", { name: label })} title={t("theme", { name: label })} onClick={() => setOpen((value) => !value)}>
+        <Icon name={resolvedDark ? "moon" : "sun"} />
       </button>
       {open ? (
-        <div className="absolute top-[50px] right-0 z-10 min-w-[150px] rounded-xl border border-border bg-surface p-1.5 shadow-card [&_button]:grid [&_button]:min-h-[42px] [&_button]:w-full [&_button]:grid-cols-[20px_1fr] [&_button]:items-center [&_button]:rounded-lg [&_button]:border-0 [&_button]:bg-transparent [&_button]:px-2 [&_button]:py-1.5 [&_button]:text-left [&_button]:text-ink [&_button:hover]:bg-surface-muted [&_button[aria-checked=true]]:bg-surface-muted" role="menu" aria-label="เลือกธีม">
+        <div className="absolute top-[50px] right-0 z-10 min-w-[150px] rounded-xl border border-border bg-surface p-1.5 shadow-card [&_button]:grid [&_button]:min-h-[42px] [&_button]:w-full [&_button]:grid-cols-[20px_1fr] [&_button]:items-center [&_button]:rounded-lg [&_button]:border-0 [&_button]:bg-transparent [&_button]:px-2 [&_button]:py-1.5 [&_button]:text-left [&_button]:text-ink [&_button:hover]:bg-surface-muted [&_button[aria-checked=true]]:bg-surface-muted" role="menu" aria-label={t("choose")}>
           {(["system", "light", "dark"] as const).map((value) => {
-            const text = value === "system" ? "ตามระบบ" : value === "light" ? "สว่าง" : "มืด";
+            const text = t(value);
             return (
               <button key={value} type="button" role="menuitemradio" aria-checked={preference === value} onClick={() => choose(value)}>
-                <span aria-hidden="true">{preference === value ? "✓" : ""}</span>{text}
+                <span className="inline-flex size-5">{preference === value ? <Icon name="check" /> : null}</span>{text}
               </button>
             );
           })}

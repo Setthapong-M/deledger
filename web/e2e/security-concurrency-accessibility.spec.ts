@@ -2,8 +2,33 @@ import { test, expect } from "@playwright/test";
 import { ui } from "../src/components/ui-styles";
 import AxeBuilder from "@axe-core/playwright";
 
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/auth/mode", route => route.fulfill({ json: { data: { environment: "local" } } }));
+  await page.route("**/api/calendar", route => route.fulfill({ json: { data: { businessDate: "2026-08-31", realDate: "2026-08-31", mode: "real", canSimulate: true, clockRevision: "e2e-calendar-0", minDate: "2024-08-31", maxDate: "2028-08-31" } } }));
+  await page.route("**/api/tracking/options", route => route.fulfill({ json: { data: {
+      "businessDate": "2026-08-31",
+      "earliestMonth": null,
+      "earliestRevision": null,
+      "prepend": {
+        "allowed": false,
+        "reason": "ONBOARDING_REQUIRED",
+        "minDate": null,
+        "maxDate": null
+      },
+      "restart": {
+        "allowed": false,
+        "reason": "MONTH_NOT_FOUND",
+        "month": null,
+        "expectedRevision": null,
+        "minDate": null,
+        "maxDate": null
+      }
+    } } }));
+});
+
+
 test("theme preference, keyboard focus and accessibility remain available", async ({ page }) => {
-  await page.route("**/api/bootstrap", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { state: "onboarding_required", month: null } }) }));
+  await page.route("**/api/bootstrap", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { state: "onboarding_required", businessDate: "2026-08-31", month: null } }) }));
   await page.goto("/start");
   await page.evaluate((primaryButton) => {
     const probe = document.createElement("button");

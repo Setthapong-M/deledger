@@ -25,6 +25,7 @@ describe("deriveReconciliation", () => {
   it("preserves a negative derived value for diagnostics without treating it as Money input", () => {
     const projection: RawMonthProjection = {
       monthStart: "2026-08-01", lifecycle: "closed", closedBy: "automatic", trackedFrom: "2026-08-01", revision: "2",
+      openingSource: "supplied",
       startingBalance: "20000.00", income: "0.00", endingBalance: "25000.00", latestSnapshot: null, monthlySpending: "-5000.00", provisionalSpending: null, detailTotal: "0.00", unitemizedSpending: "-5000.00", setup: [], isFinalDay: false, isArchived: false,
     };
     const view = toMonthView(projection, { editIncome: false, recordSnapshot: false, editEndingBalance: false, manageSetup: false, confirmDetails: false, manualClose: false });
@@ -35,6 +36,7 @@ describe("deriveReconciliation", () => {
   it("maps an empty closed projection and a confirmed detail without inventing values", () => {
     const projection: RawMonthProjection = {
       monthStart: "2026-08-01", lifecycle: "closed", closedBy: "manual", trackedFrom: "2026-08-01", revision: "3",
+      openingSource: "supplied",
       startingBalance: null, income: null, endingBalance: null, latestSnapshot: null, monthlySpending: null, provisionalSpending: null, detailTotal: "0.00", unitemizedSpending: null,
       setup: [{ id: "00000000-0000-4000-8000-000000000012", position: 1, name: "Internet", kind: "variable", fixedAmount: null, isPaused: true, detail: { confirmedName: "Internet", confirmedKind: "variable", confirmedAmount: "500.00", confirmedAt: "2026-08-20T00:00:00Z" } }], isFinalDay: true, isArchived: false,
     };
@@ -50,6 +52,7 @@ describe("toMonthView", () => {
   it("maps numeric and bigint transport values to the complete Month View", () => {
     const projection: RawMonthProjection = {
       monthStart: "2026-08-01",
+      openingSource: "supplied",
       lifecycle: "open",
       closedBy: null,
       trackedFrom: "2026-08-03",

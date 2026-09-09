@@ -2,9 +2,33 @@ import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import type { MonthView } from "../src/lib/api-client";
 
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/calendar", route => route.fulfill({ json: { data: { businessDate: "2026-08-31", realDate: "2026-08-31", mode: "real", canSimulate: true, clockRevision: "e2e-calendar-0", minDate: "2024-08-31", maxDate: "2028-08-31" } } }));
+  await page.route("**/api/tracking/options", route => route.fulfill({ json: { data: {
+      "businessDate": "2026-08-31",
+      "earliestMonth": "2026-08",
+      "earliestRevision": "7",
+      "prepend": {
+        "allowed": true,
+        "reason": null,
+        "minDate": "2024-08-01",
+        "maxDate": "2026-07-31"
+      },
+      "restart": {
+        "allowed": false,
+        "reason": "RESTART_NOT_ALLOWED",
+        "month": null,
+        "expectedRevision": null,
+        "minDate": null,
+        "maxDate": null
+      }
+    } } }));
+});
+
+
 function monthView(): MonthView {
   return {
-    month: "2026-08", lifecycle: "open", closedBy: null, trackedFrom: "2026-08-01", isPartial: false, revision: "7",
+    month: "2026-08", openingSource: "supplied", lifecycle: "open", closedBy: null, trackedFrom: "2026-08-01", isPartial: false, revision: "7",
     summary: { startingBalance: "20000.00", income: "30000.00", endingBalance: null, latestSnapshot: { id: "snapshot-1", amount: "15000.00", observedOn: "2026-08-20" }, referenceKind: "snapshot", referenceAmount: "15000.00", monthlySpending: null, provisionalSpending: "35000.00", detailTotal: "6000.00", unitemizedSpending: "29000.00" },
     reconciliation: { state: "draft", issueCodes: [] },
     setup: [{ id: "00000000-0000-4000-8000-000000000001", position: 1, name: "ค่าเช่า", kind: "fixed", fixedAmount: "6000.00", isPaused: false, detail: null }],
@@ -14,7 +38,7 @@ function monthView(): MonthView {
 
 async function mockMonth(page: Page, view: MonthView) {
   await page.route("**/api/auth/mode", (route) => route.fulfill({ json: { data: { environment: "local" } } }));
-  await page.route("**/api/months/current", (route) => route.fulfill({ json: { data: { state: "ready", month: view } } }));
+  await page.route("**/api/months/current", (route) => route.fulfill({ json: { data: { state: "ready", businessDate: "2026-08-31", month: view } } }));
   await page.goto("/month");
   await expect(page.getByRole("heading", { name: "สิงหาคม 2569" })).toBeVisible();
 }
@@ -28,7 +52,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(overview).toContainText("รายจ่ายโดยประมาณ");
     await expect(overview).toContainText("35,000.00");
     await overview.getByText("ดูวิธีคำนวณ").click();
-    await expect(overview).toContainText("ต้องยืนยันยอดปลายแยกต่างหาก");
+    await expect(overview).toContainText("ยอดเงินระหว่างเดือนใช้ดูรายจ่ายคร่าว ๆ ต้องยืนยันยอดสิ้นเดือนอีกครั้ง");
     await expect(page.getByRole("button", { name: "ปิดเดือน", exact: true })).toHaveCount(0);
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -53,10 +77,10 @@ test("close review preserves the close payload and supports cancellation and key
   await mockMonth(page, view);
   const close = page.getByRole("button", { name: "ปิดเดือน", exact: true });
   await close.click();
-  const dialog = page.getByRole("dialog", { name: "ปิดเดือนนี้?" });
+  const dialog = page.getByRole("dialog", { name: "ปิดเดือนนี้ไหม?" });
   await expect(dialog).toContainText("35,000.00");
   await expect(dialog).toContainText("15,000.00");
-  await expect(dialog).toContainText("ตรวจสอบแล้ว");
+  await expect(dialog).toContainText("ยอดตรงกัน");
   await expect(dialog.getByRole("button", { name: "ปิดหน้าต่าง" })).toBeFocused();
   await page.keyboard.press("Shift+Tab");
   await expect(dialog.getByRole("button", { name: "ยืนยันปิดเดือน" })).toBeFocused();
@@ -85,7 +109,7 @@ test("missing inputs remain empty and server permissions control actions at 320p
   view.allowedActions = { editIncome: false, recordSnapshot: false, editEndingBalance: false, manageSetup: false, confirmDetails: false, manualClose: false };
   await page.setViewportSize({ width: 320, height: 720 });
   await mockMonth(page, view);
-  await expect(page.getByText("ยังมีข้อมูลไม่พอสำหรับคำนวณรายจ่าย")).toBeVisible();
+  await expect(page.getByText("ยังมีข้อมูลไม่พอคำนวณรายจ่าย")).toBeVisible();
   const needsInformation = page.getByText("ข้อมูลไม่ครบ", { exact: true }).locator("..");
   await expect(needsInformation).toHaveCSS("border-top-style", "dashed");
   await expect(needsInformation).toHaveCSS("border-top-width", "2px");
@@ -107,7 +131,7 @@ test("history labels provisional spending and treats tracking gaps as a separate
   await expect(page.getByRole("article")).toContainText("รายจ่ายโดยประมาณ");
   await expect(page.getByRole("tab", { name: /สิงหาคม/ })).toContainText("กำลังกรอก");
   await page.getByRole("tab", { name: /ช่วงข้อมูลขาด/ }).click();
-  await expect(page.getByRole("article")).toContainText("ช่วงหยุดติดตาม");
+  await expect(page.getByRole("article").getByText("หยุดติดตาม", { exact: true })).toBeVisible();
   await expect(page.getByRole("article")).not.toContainText("ข้อมูลไม่ครบ");
 });
 
@@ -124,9 +148,9 @@ test("mobile navigation stays reachable without covering the last action", async
   expect(navigationBox).not.toBeNull();
   expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(navigationBox!.y);
   await page.route("**/api/months", (route) => route.fulfill({ json: { data: [] } }));
-  await navigation.getByRole("link", { name: "ประวัติ" }).click();
+  await navigation.getByRole("link", { name: "ย้อนหลัง" }).click();
   await expect(page).toHaveURL(/\/history$/);
-  await expect(navigation.getByRole("link", { name: "ประวัติ" })).toHaveAttribute("aria-current", "page");
+  await expect(navigation.getByRole("link", { name: "ย้อนหลัง" })).toHaveAttribute("aria-current", "page");
 });
 
 test("selected navigation and reconciled badges retain the project colors on interaction", async ({ page }) => {
@@ -141,7 +165,7 @@ test("selected navigation and reconciled badges retain the project colors on int
   const selected = page.getByRole("navigation").getByRole("link", { name: "เดือนนี้" });
   await selected.hover({ force: true });
   await expect(selected).toHaveCSS("background-color", "rgb(181, 198, 156)");
-  const reconciled = page.getByText("ตรวจสอบแล้ว", { exact: true }).locator("..");
+  const reconciled = page.getByText("ยอดตรงกัน", { exact: true }).locator("..");
   await expect(reconciled).toHaveCSS("background-color", "rgb(181, 198, 156)");
   await expect(reconciled).toHaveCSS("color", "rgb(38, 38, 38)");
 });
@@ -150,7 +174,7 @@ test("inconsistent months keep a distinct border without relying on color", asyn
   const view = monthView();
   view.reconciliation.state = "inconsistent";
   await mockMonth(page, view);
-  const inconsistent = page.getByText("ยอดไม่สอดคล้อง", { exact: true }).locator("..");
+  const inconsistent = page.getByText("ยอดไม่ตรงกัน", { exact: true }).locator("..");
   await expect(inconsistent).toHaveCSS("border-top-style", "double");
   await expect(inconsistent).toHaveCSS("border-top-width", "3px");
 });
