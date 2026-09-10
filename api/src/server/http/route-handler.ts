@@ -69,6 +69,7 @@ function isJsonRequest(request: Request): boolean {
 function isAllowedOrigin(request: Request, config: AppConfig): boolean {
   const origin = request.headers.get("origin");
   if (origin === config.APP_ORIGIN) return true;
+  if (config.environment === "qas" && config.APP_ORIGIN === "https://deledgr.online" && origin === "http://deledger.internal") return true;
   if (config.environment !== "local" || origin === null) return false;
   try {
     const parsed = new URL(origin);

@@ -53,8 +53,8 @@ export function loadConfig(environment: ConfigEnvironment = process.env): AppCon
     const identity = new URL(result.data.IDENTITY_DATABASE_URL);
     if (identity.search || identity.hash) throw new Error("IDENTITY_DATABASE_URL must not use query parameters or fragments in local mode");
   }
-  if (result.data.DELEDGER_ENV === "qas" && result.data.APP_ORIGIN !== "http://deledger.internal") {
-    throw new Error("APP_ORIGIN must be http://deledger.internal in QAS");
+  if (result.data.DELEDGER_ENV === "qas" && !["http://deledger.internal", "https://deledgr.online"].includes(result.data.APP_ORIGIN)) {
+    throw new Error("APP_ORIGIN must be http://deledger.internal or https://deledgr.online in QAS");
   }
   if (result.data.DELEDGER_ENV === "qas" && (!result.data.CLOUDFLARE_TEAM_DOMAIN || !result.data.CLOUDFLARE_ACCESS_AUD)) {
     throw new Error("QAS requires CLOUDFLARE_TEAM_DOMAIN and CLOUDFLARE_ACCESS_AUD");

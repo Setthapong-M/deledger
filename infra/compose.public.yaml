@@ -1,0 +1,47 @@
+services:
+  api:
+    environment:
+      APP_ORIGIN: https://deledgr.online
+
+  proxy:
+    image: nginx:stable-alpine@sha256:dc5069ad14f19660b141b21236140b91656bf89bbc3e2417c70ae650cd66104c
+    entrypoint: [nginx]
+    command: [-g, "daemon off;"]
+    user: "${DELEDGER_TLS_UID:-1000}:${DELEDGER_TLS_GID:-1000}"
+    networks: [edge]
+    ports:
+      - "${DELEDGER_HTTPS_BIND:-192.168.1.249}:443:8443"
+    volumes:
+      - type: bind
+        source: ./nginx/nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./nginx/cloudflare-allow.conf
+        target: /etc/nginx/cloudflare-allow.conf
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${DELEDGER_TLS_DIR:-/etc/deledger/tls}
+        target: /etc/nginx/tls
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      web: {condition: service_healthy}
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, "http://127.0.0.1:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}

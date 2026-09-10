@@ -1,5 +1,7 @@
 # Release checklist
 
+This checklist describes the base private stack. For the optional public QAS overlay, also follow [public acceptance](deploy-public-qas.md); its intentional TCP 443 proxy publication replaces the no-host-ports condition for that proxy only. The existing release script does not certify the overlay.
+
 - [ ] `pnpm install --frozen-lockfile`
 - [ ] `pnpm lint`, `pnpm typecheck`, `pnpm build`
 - [ ] `pnpm test:unit`, `pnpm test:integration`, `pnpm test:e2e`, `pnpm test:ops`, `pnpm test:coverage`

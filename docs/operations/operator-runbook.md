@@ -6,7 +6,7 @@ QAS access remains Cloudflare Access first: an invited email with a valid Access
 
 Archiving is a soft-delete lifecycle operation. It never removes financial rows. Restoration may require a fresh supplied opening and marks the gap in History when a calendar boundary was crossed.
 
-For an outage, check the PostgreSQL health state and the private Tunnel. Nest retries catch-up every minute after startup; check API readiness after the database is healthy. Do not expose a host port or bypass WARP to troubleshoot.
+For a private-route outage, check PostgreSQL and Tunnel. For the authorized public ingress, follow the [public QAS runbook](deploy-public-qas.md), including DNS, router, TLS and proxy peer restrictions. Nest retries catch-up every minute after startup; check API readiness after the database is healthy. Do not expose additional ports to troubleshoot.
 
 The local host and Tunnel are best-effort and have no uptime SLA. `BACKUP_MODE=disabled` is the current temporary policy: there is no recovery path, and the backup/restore timers must remain disabled. Do not remove, replace, or recreate the only database volume unless permanent loss of all Deledger data is intended. When external storage becomes available, activate and verify the documented enforced backup mode before relying on recovery.
 

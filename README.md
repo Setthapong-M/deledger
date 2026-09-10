@@ -81,6 +81,8 @@ ESLint configuration ปัจจุบันยกเว้น TS/TSX ดัง
 
 ## Deploy และจัดการข้อมูล
 
+สำหรับ `https://deledgr.online` ใช้ [public QAS cutover](docs/operations/deploy-public-qas.md): เพิ่ม HTTPS proxy ด้วย Compose overlay และคง Cloudflare Access JWT; Tunnel เดิมเก็บไว้จนผ่านการทดสอบจากภายนอก
+
 ใช้ [deployment runbook](docs/operations/deploy-private-beta.md) และ [operator runbook](docs/operations/operator-runbook.md) สำหรับ migrations, invitation, archive/restore และ export เก็บ runtime environment และ secrets นอก Git; frontend ได้เฉพาะ API origin ส่วน database/Access verifier credentials อยู่ที่ Nest
 
 Migration แรกของ stack นี้ต้องใช้ฐานใหม่ การเปลี่ยนจาก legacy database ต้องตรวจชื่อฐาน, Compose project และ volume ก่อนล้างข้อมูล `dev:local` apply migrations โดยไม่ reset ฐานเดิม การ reset local/QAS ต้องมีการอนุมัติที่ครอบคลุมเป้าหมาย และหลัง reset QAS ต้อง invite ผู้ใช้ใหม่

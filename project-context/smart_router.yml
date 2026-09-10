@@ -69,6 +69,7 @@ routes:
     read:
       - project-context/architecture/overview.md
       - docs/operations/deploy-private-beta.md
+      - docs/operations/deploy-public-qas.md
       - docs/operations/operator-runbook.md
       - docs/operations/release-checklist.md
       - project-context/troubleshooting/known-issues.md
