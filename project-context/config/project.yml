@@ -32,6 +32,7 @@ configuration_sources:
   frontend_validation: web/src/instrumentation.ts
   local_stack: infra/compose.local.yaml
   qas_stack: infra/compose.yaml
+  qas_public_overlay: infra/compose.public.yaml
   development_launcher: scripts/dev-local.sh
   test_launcher: scripts/test-db.mjs
 policy_sources:

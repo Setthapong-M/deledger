@@ -27,4 +27,22 @@ describe("deployment boundaries", () => {
     expect(config.networks.app.internal).toBe(true);
     expect(config.networks.data.internal).toBe(true);
   });
+  it("publishes only the TLS proxy in public QAS and keeps data credentials isolated", () => {
+    const output = execFileSync("docker", ["compose", "-f", "infra/compose.yaml", "-f", "infra/compose.public.yaml", "config", "--format", "json"], { cwd: root, encoding: "utf8", env: { ...process.env,
+      DATABASE_URL: "postgresql://deledger_web:placeholder@postgres:5432/deledger", IDENTITY_DATABASE_URL: "postgresql://deledger_identity:placeholder@postgres:5432/deledger",
+      CLOUDFLARE_TEAM_DOMAIN: "https://example.cloudflareaccess.com", CLOUDFLARE_ACCESS_AUD: "placeholder", CLOUDFLARE_TUNNEL_TOKEN: "placeholder", BACKUP_MODE: "disabled", DELEDGER_HTTPS_BIND: "192.168.1.249",
+    } });
+    const config = JSON.parse(output);
+    for (const [name, service] of Object.entries(config.services)) {
+      if (name !== "proxy") expect((service as { ports?: unknown[] }).ports ?? []).toEqual([]);
+    }
+    expect(config.services.proxy.ports).toEqual([expect.objectContaining({ host_ip: "192.168.1.249", published: "443", target: 8443, protocol: "tcp" })]);
+    expect(Object.keys(config.services.proxy.networks)).toEqual(["edge"]);
+    expect(config.services.proxy.environment ?? {}).toEqual({});
+    expect(config.services.proxy.read_only).toBe(true);
+    expect(config.services.api.environment.APP_ORIGIN).toBe("https://deledgr.online");
+    expect(config.services.web.environment.API_ORIGIN).toBe("http://api:3001");
+    expect(config.networks.app.internal).toBe(true);
+    expect(config.networks.data.internal).toBe(true);
+  });
 });

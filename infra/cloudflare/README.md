@@ -1,5 +1,7 @@
 # Private WARP and Cloudflare Access
 
+For the authorized `deledgr.online` public ingress, follow [public QAS cutover](../../docs/operations/deploy-public-qas.md). This document describes the retained private fallback.
+
 The MVP uses a named Tunnel and a private Access application. There is no public hostname, Quick Tunnel, wildcard allow rule, or direct LAN listener.
 
 1. Create a private hostname route for `deledger.internal` to `http://web:80` on the named Tunnel.

@@ -14,5 +14,6 @@ Select affected consumer routes as well as the owning module. Paths below are na
 | HTTP | `api/src/api.controller.ts`, `api/src/routes/`, `api/src/server/http/` | `web/src/lib/api-client.ts`, proxy, forms/errors | HTTP integration, API proxy and integrated E2E |
 | UI | `web/src/components/`, `web/src/app/` | Navigation, theme, focus/mobile, reload/conflicts | Components, accessibility and Playwright projects |
 | Configuration/images | `api/src/server/config.ts`, `web/src/instrumentation.ts`, `infra/`, Dockerfiles | Startup, networks, JWT, release scans | Config tests, container smoke, release checks |
+| Public QAS ingress | `infra/compose.public.yaml`, `infra/nginx/`, origin validation in config/route-handler | Cloudflare Access, router, TLS, Next proxy, private-route fallback | QAS HTTP and Compose tests, `scripts/test-public-ingress.mjs`, external acceptance in public QAS runbook |
 
 Completion: name affected consumers in the task, test the risk boundary, and update this map when ownership/entry points move. Report unverified consumers through the [review guidelines](../review/REVIEW_GUIDELINES.md).

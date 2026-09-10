@@ -51,6 +51,25 @@ async function invited() {
 }
 
 describe("QAS authentication through real Nest HTTP", () => {
+  it("supports public HTTPS writes and the private cutover route without weakening authentication or origin checks", async () => {
+    process.env.APP_ORIGIN = "https://deledgr.online";
+    try {
+      const user = await invited();
+      for (const allowedOrigin of ["https://deledgr.online", "http://deledger.internal"]) {
+        const response = await send("/profile", user.token, "PATCH", { dateOfBirth: "1990-02-28" }, { origin: allowedOrigin });
+        expect(response.status).toBe(200);
+      }
+      const denied = await send("/profile", user.token, "PATCH", { dateOfBirth: "1990-02-28" }, { origin: "https://evil.example" });
+      expect(denied.status).toBe(400);
+      expect((await denied.json()).error.field).toBe("origin");
+      for (const token of [undefined, "forged.jwt.token"]) {
+        const response = await send("/profile", token, "PATCH", { dateOfBirth: "1990-02-28" }, { origin: "https://deledgr.online" });
+        expect(response.status).toBe(401);
+      }
+    } finally {
+      process.env.APP_ORIGIN = "http://deledger.internal";
+    }
+  });
   it("accepts invited signed identity and ignores forged owner headers", async () => {
     const first = await invited(), second = await invited();
     const response = await send("/profile", first.token, "GET", undefined, { "x-user-id": second.ownerId, "x-owner-id": second.ownerId, "cf-access-authenticated-user-email": second.email });

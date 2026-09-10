@@ -8,6 +8,14 @@ const common = {
 };
 
 describe("application environment configuration", () => {
+  it.each(["http://deledger.internal", "https://deledgr.online"])("accepts the exact QAS origin %s", APP_ORIGIN => {
+    expect(loadConfig({ ...common, DELEDGER_ENV: "qas", APP_ORIGIN, CLOUDFLARE_TEAM_DOMAIN: "https://team.cloudflareaccess.com", CLOUDFLARE_ACCESS_AUD: "aud" }).APP_ORIGIN).toBe(APP_ORIGIN);
+  });
+
+  it.each(["http://deledgr.online", "https://deledgr.online/", "https://deledgr.online:444", "https://deledgr.online.evil.test", "https://www.deledgr.online"])("rejects an unapproved QAS origin %s", APP_ORIGIN => {
+    expect(() => loadConfig({ ...common, DELEDGER_ENV: "qas", APP_ORIGIN, CLOUDFLARE_TEAM_DOMAIN: "https://team.cloudflareaccess.com", CLOUDFLARE_ACCESS_AUD: "aud" })).toThrow(/APP_ORIGIN/);
+  });
+
   it.each([undefined, "deledger_local", "deledger_local_v2"])("accepts selected local database %s", name => {
     const database = name ?? "deledger_local";
     expect(loadConfig({ ...common, DELEDGER_ENV: "local", APP_ORIGIN: "http://127.0.0.1:3000", LOCAL_DATABASE_NAME: name,

@@ -1,5 +1,7 @@
 # Deploy the private beta
 
+For the operator-authorized public domain cutover, use [public QAS](deploy-public-qas.md). The procedure below describes the base private stack, not the optional HTTPS overlay.
+
 1. Confirm the host is patched and Docker is running. This private beta currently uses `BACKUP_MODE=disabled`: do not create `/mnt/deledger-backups`, configure a temporary target, or enable backup/restore timers. Loss of the host disk or PostgreSQL volume permanently loses the data.
    For a guided first run, execute `ENV_FILE=/etc/deledger/runtime.env /home/admin/vault/deledger/scripts/setup-private-beta.sh` and complete each paused operator step.
 2. Create three file-backed Compose secrets (`postgres_password`, `web_password`, `identity_password`) for the PostgreSQL admin and two Deledger roles under `/etc/deledger/secrets` (or the `DELEDGER_SECRET_DIR` recorded in the runtime environment), with no world permissions. Keep values outside this repository.

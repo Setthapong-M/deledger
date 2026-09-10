@@ -1,6 +1,6 @@
 # Architecture and data flow
 
-[ADR 0008](../../docs/adr/0008-split-presentation-and-business-services.md) owns the current topology. Local/private constraints from ADR 0005/0007 still apply; [CONTEXT.md](../../CONTEXT.md) owns vocabulary.
+[ADR 0008](../../docs/adr/0008-split-presentation-and-business-services.md) owns the service split. Local/private constraints from ADR 0005/0007 still apply except for the explicitly authorized [public QAS ingress](../../docs/operations/deploy-public-qas.md); [CONTEXT.md](../../CONTEXT.md) owns vocabulary.
 
 ```mermaid
 flowchart LR
@@ -18,7 +18,7 @@ flowchart LR
 
 ## Trust boundaries
 
-QAS Tunnel/Next share `edge`; Next/Nest share internal `app`; Nest/PostgreSQL share internal `data`. Nest also joins `api-egress` for JWKS. QAS publishes no host ports. Next has no DB credentials or data-network membership. Exact settings belong to [Compose](../../infra/compose.yaml).
+QAS Tunnel/Next share `edge`; Next/Nest share internal `app`; Nest/PostgreSQL share internal `data`. Nest also joins `api-egress` for JWKS. The base private stack publishes no host ports. The operator-authorized [public QAS overlay](../../docs/operations/deploy-public-qas.md) adds Cloudflare proxy/Access → router → Nginx TLS on host TCP 443 → Next, retaining Tunnel during acceptance. This supersedes the earlier private-only ingress constraint for this deployment. Next has no DB credentials or data-network membership. Exact settings belong to [Compose](../../infra/compose.yaml) and its [public overlay](../../infra/compose.public.yaml).
 
 Local has a separate volume/network and loopback services. Opaque cookie login may create a development identity from email/Thai mobile. QAS requires a verified Access JWT with an invited active email; plain identity headers do not authenticate. Local profile contacts can change through controlled identity operations; QAS contacts are read-only. Production mode is fail-closed until separately implemented.
 
