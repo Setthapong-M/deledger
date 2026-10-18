@@ -20,6 +20,10 @@ WARP → Access → Tunnel → Next.js → NestJS → Prisma → PostgreSQL
 
 NestJS ถือ business logic รวมถึง logic ที่เคยอยู่ใน PostgreSQL functions; Next.js แสดงผลลัพธ์และ `allowedActions` การเขียนข้อมูลของผู้ใช้ผูก identity, lock และ RLS ภายใน transaction เดียว อ่านเหตุผลใน [ADR 0008](docs/adr/0008-split-presentation-and-business-services.md)
 
+## Development toolchain
+
+ใช้ Node.js `>=22.23.1` และ pnpm `10.34.7`; container ยังคง pin Node.js `22.23.1` และ CI ตรวจ minimum นี้ร่วมกับ Node `22`, `24`, `26` รุ่นล่าสุด Frontend ใช้ ESLint 9, Vitest 3, jsdom 26 และ Vite 6 โดยคง NestJS/Prisma และ backend tests ของ stack ปัจจุบันไว้
+
 ## เริ่มพัฒนาในเครื่อง
 
 ติดตั้ง Node.js และ pnpm ตาม `engines` / `packageManager` ใน [package.json](package.json) พร้อม Docker Engine และ Compose ที่รองรับไฟล์ใน `infra/` ใช้ lockfile เป็น dependency baseline

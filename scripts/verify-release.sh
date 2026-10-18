@@ -19,8 +19,10 @@ require_command() {
 [[ "$BACKUP_MODE" == "disabled" || "$BACKUP_MODE" == "enforced" ]] || fail "BACKUP_MODE must be disabled or enforced"
 export DATABASE_URL IDENTITY_DATABASE_URL CLOUDFLARE_TEAM_DOMAIN CLOUDFLARE_ACCESS_AUD CLOUDFLARE_TUNNEL_TOKEN BACKUP_MODE
 
-[[ "$(node --version)" == "v22.23.1" ]] || fail "Node 22.23.1 required"
-[[ "$(pnpm --version)" == "11.1.3" ]] || fail "pnpm 11.1.3 required"
+[[ "$(node --version)" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] &&
+  (( BASH_REMATCH[1] > 22 || (BASH_REMATCH[1] == 22 && (BASH_REMATCH[2] > 23 || (BASH_REMATCH[2] == 23 && BASH_REMATCH[3] >= 1))) )) ||
+  fail "Node 22.23.1 or newer required"
+[[ "$(pnpm --version)" == "10.34.7" ]] || fail "pnpm 10.34.7 required"
 for command in docker find stat; do require_command "$command"; done
 
 secret_dir="${DELEDGER_SECRET_DIR:-/etc/deledger/secrets}"

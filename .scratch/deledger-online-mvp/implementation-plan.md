@@ -157,8 +157,9 @@ All Dark foreground/background pairs pass WCAG AA for normal text. The fixed pri
 
 | Package/component | Exact version |
 |---|---:|
-| Node.js | 22.23.1 |
-| pnpm | 11.1.3 |
+| Node.js development runtime | >=22.23.1 |
+| Node.js container runtime | 22.23.1 |
+| pnpm | 10.34.7 |
 | Next.js / eslint-config-next | 16.3.3 |
 | React / React DOM | 19.2.8 |
 | TypeScript | 7.0.2 |
@@ -168,14 +169,15 @@ All Dark foreground/background pairs pass WCAG AA for normal text. The fixed pri
 | pg | 8.23.0 |
 | jose | 6.2.10 |
 | zod | 4.5.4 |
-| node-pg-migrate | 9.0.0 |
-| ESLint | 10.9.1 |
+| node-pg-migrate (legacy; replaced by Prisma) | 9.0.0 |
+| ESLint | 9.39.5 |
 | `@types/node` | 26.4.0 |
 | `@types/react` | 19.2.18 |
 | `@types/react-dom` | 19.2.5 |
 | `@types/pg` | 8.23.1 |
-| Vitest / `@vitest/coverage-v8` | 4.1.11 |
-| jsdom | 30.0.1 |
+| Frontend Vitest / `@vitest/coverage-v8` | 3.2.7 |
+| jsdom | 26.1.0 |
+| Vite | 6.4.4 |
 | Testing Library React | 16.3.3 |
 | Testing Library DOM | 10.4.1 |
 | Testing Library User Event | 14.6.6 |
@@ -183,7 +185,11 @@ All Dark foreground/background pairs pass WCAG AA for normal text. The fixed pri
 | Playwright Test | 1.62.1 |
 | Axe Playwright | 4.13.0 |
 
+Node.js `22.23.1` ขึ้นไปเป็น development runtime contract; CI ตรวจ `22.23.1` และรุ่นล่าสุดของ `22`, `24`, `26`. ใช้ pnpm 10 และ workspace overrides สำหรับ `typescript-eslint@8.46.0` / `unrs-resolver@1.11.1` เพื่อรักษา Node 22.23.1 compatibility.
+
 ใช้ `save-exact=true`; `pnpm-lock.yaml` เป็น source of truth สำหรับ transitive dependency ทั้งหมด ห้ามใช้ caret/tilde ranges
+
+Current stack note: ADR 0008 supersedes the original single-Next/database-migration sections below. Current manifests retain NestJS/Prisma and backend Vitest 4; the compatibility adjustments above apply to the frontend toolchain. See `package.json`, `api/package.json` and `web/package.json` for active dependencies.
 
 ## Files to change / create
 
@@ -609,9 +615,9 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - **Audit:** `git check-ignore -v prototypes/deledger-ui-prototype.html` must report root `.gitignore`; `git status` must not stage or modify the nested prototype repo.
 
 - [x] **1.2 Create exact package manifests and lockfile** `gate` `high`
-  - Root `package.json`: `private: true`, `packageManager: pnpm@11.1.3`, Node `22.23.1`, scripts `dev`, `build`, `lint`, `typecheck`, `qc`, `db:migrate`, `db:rollback`, `test:db`, `test:unit`, `test:integration`, `test:e2e`, `test:ops`, `test:coverage`, `test:all`, `operator:user`, `verify:release`; exact dependencies `pg@8.23.0`, `node-pg-migrate@9.0.0` and exact dev type packages from Pinned toolchain.
-  - `web/package.json`: exact runtime dependencies `next@16.3.3`, `react@19.2.8`, `react-dom@19.2.8`, `pg@8.23.0`, `jose@6.2.10`, `zod@4.5.4`; exact dev dependencies `typescript@7.0.2`, `eslint@10.9.1`, `eslint-config-next@16.3.3`, React/Node/pg types and every exact test package in Pinned toolchain.
-  - Generate `pnpm-lock.yaml` only with pnpm 11.1.3; no semver ranges in either manifest.
+  - Root `package.json`: `private: true`, `packageManager: pnpm@10.34.7`, Node `>=22.23.1`, scripts `dev`, `build`, `lint`, `typecheck`, `qc`, `db:migrate`, `db:rollback`, `test:db`, `test:unit`, `test:integration`, `test:e2e`, `test:ops`, `test:coverage`, `test:all`, `operator:user`, `verify:release`; exact dependencies `pg@8.23.0`, `node-pg-migrate@9.0.0 (legacy; replaced by Prisma)` and exact dev type packages from Pinned toolchain.
+  - `web/package.json`: exact runtime dependencies `next@16.3.3`, `react@19.2.8`, `react-dom@19.2.8`, `pg@8.23.0`, `jose@6.2.10`, `zod@4.5.4`; exact dev dependencies `typescript@7.0.2`, `eslint@9.39.5`, `eslint-config-next@16.3.3`, React/Node/pg types and every exact test package in Pinned toolchain.
+  - Generate `pnpm-lock.yaml` only with pnpm 10.34.7; dependency versions remain exact; the Node engine range is `>=22.23.1`.
   - **Audit:** `pnpm install --frozen-lockfile`, `pnpm list --depth 0` and a script that fails on a dependency spec beginning `^`, `~`, `>`, `<`, `*` must pass.
 
 - [x] **1.3 Bootstrap the minimal Next.js shell** `frontend` `gate`
@@ -619,7 +625,7 @@ Open the PR but do not merge, tag, publish a GitHub Release or deploy automatica
   - Add root layout with Thai `lang="th"`, viewport metadata, the exact Light/Dark Neutral Ledger CSS tokens—white/black/gray base, immutable opaque `#B5C69C` as the only chromatic accent, and `#262626` as every foreground on primary—and security headers in `next.config.ts`: CSP, `nosniff`, `no-referrer`, and device APIs denied by `Permissions-Policy`.
   - Root layout reads `deledger_theme` with Next `await cookies()`; exact `light|dark` sets `<html data-theme>` and `color-scheme`, while absent/invalid preference renders no attribute and lets `prefers-color-scheme` resolve before paint. No inline theme bootstrap script.
   - Root `/` reads bootstrap lifecycle later; for this gate it renders a server-owned placeholder without mock financial values.
-  - `web/Dockerfile` uses multi-stage `node:22.23.1-bookworm-slim`, Corepack pnpm 11.1.3, standalone output, non-root UID and port 80.
+  - `web/Dockerfile` uses multi-stage `node:22.23.1-bookworm-slim`, Corepack pnpm 10.34.7, standalone output, non-root UID and port 80.
   - **Audit:** `pnpm --dir web typecheck`, `pnpm --dir web lint`, `pnpm --dir web build`, and `docker build -f web/Dockerfile .` pass before Gate 2.
 
 - [x] **1.4 Establish disposable test harnesses without production behavior tests** `test-integration` `test-e2e` `high`
@@ -899,7 +905,7 @@ Expected result: all suites Green across configured browser projects; coverage m
 Run after every relevant Gate and run the complete sequence at Gate 8:
 
 ```bash
-corepack prepare pnpm@11.1.3 --activate
+corepack prepare pnpm@10.34.7 --activate
 pnpm install --frozen-lockfile
 pnpm lint
 pnpm typecheck

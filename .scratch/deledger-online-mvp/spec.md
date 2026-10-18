@@ -83,7 +83,8 @@ No host inbound port is published. PostgreSQL has no host port mapping and is re
 | Ubuntu host | 24.04 |
 | Docker Engine | 29.2.1 |
 | Docker Compose | 5.0.2 |
-| Node.js container/runtime | 22.23.1 |
+| Node.js development runtime | >=22.23.1 |
+| Node.js container runtime | 22.23.1 |
 | Next.js | 16.3.3 |
 | React / React DOM | 19.2.8 |
 | TypeScript | 7.0.2 |
@@ -93,8 +94,8 @@ No host inbound port is published. PostgreSQL has no host port mapping and is re
 | pg | 8.23.0 |
 | jose | 6.2.10 |
 | zod | 4.5.4 |
-| node-pg-migrate | 9.0.0 |
-| pnpm | 11.1.3 |
+| node-pg-migrate (legacy; replaced by Prisma) | 9.0.0 |
+| pnpm | 10.34.7 |
 
 The implementation must pin exact versions in the lockfile and container image tags. Renovation is a later maintenance operation, not part of the initial build.
 
