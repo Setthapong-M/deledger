@@ -1,0 +1,148 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body><pre>print(&#x27;START_WIRING&#x27;);
+// Native Figma Plugin API. Run in Scripter; no MCP calls, network or app database writes.
+const createdNodeIds=[],mutatedNodeIds=[],removedNodeIds=[];
+const keep=n=&gt;{createdNodeIds.push(n.id);return n};
+const touch=n=&gt;{mutatedNodeIds.push(n.id);return n};
+const goPage=async p=&gt;{if(figma.setCurrentPageAsync)await figma.setCurrentPageAsync(p);else figma.currentPage=p};
+const styles=await figma.getLocalTextStylesAsync();
+await Promise.all(styles.map(s=&gt;figma.loadFontAsync(s.fontName)));
+await Promise.all([&#x27;Regular&#x27;,&#x27;Medium&#x27;,&#x27;SemiBold&#x27;,&#x27;Bold&#x27;,&#x27;ExtraBold&#x27;].flatMap(style=&gt;[&#x27;Noto Sans&#x27;,&#x27;Noto Sans Thai UI&#x27;].map(family=&gt;figma.loadFontAsync({family,style}))));
+print(&#x27;FONTS_LOADED&#x27;);
+const TS=Object.fromEntries(styles.map(s=&gt;[s.name,s]));
+const vars=await figma.variables.getLocalVariablesAsync(),cols=await figma.variables.getLocalVariableCollectionsAsync();
+const C={};for(const theme of [&#x27;Light&#x27;,&#x27;Dark&#x27;]){const c=cols.find(c=&gt;c.name===&#x27;Deledger / Color / &#x27;+theme);C[theme]=Object.fromEntries(vars.filter(v=&gt;v.variableCollectionId===c.id).map(v=&gt;[v.name.replace(&#x27;color/&#x27;,&#x27;&#x27;),v]));}
+const paint=(theme,key,opacity=1)=&gt;figma.variables.setBoundVariableForPaint({type:&#x27;SOLID&#x27;,color:{r:0,g:0,b:0},opacity},&#x27;color&#x27;,C[theme][key]);
+function layout(name,direction=&#x27;VERTICAL&#x27;,width){const n=keep(figma.createFrame());n.name=name;n.layoutMode=direction;n.fills=[];n.primaryAxisSizingMode=&#x27;AUTO&#x27;;n.counterAxisSizingMode=width?&#x27;FIXED&#x27;:&#x27;AUTO&#x27;;if(width){n.resize(width,100);n.primaryAxisSizingMode=&#x27;AUTO&#x27;}return n;}
+function txt(parent,value,role=&#x27;Body&#x27;,theme=&#x27;Light&#x27;,key=&#x27;ink&#x27;,width){const n=keep(figma.createText()),locale=/[\u0e00-\u0e7f]/.test(value)?&#x27;Thai&#x27;:&#x27;Latin&#x27;,s=TS[&#x27;Deledger/&#x27;+locale+&#x27;/&#x27;+role];n.fontName={family:s.fontName.family,style:s.fontName.style};n.textStyleId=s.id;n.characters=value;n.fills=[paint(theme,key)];if(width){n.textAutoResize=&#x27;HEIGHT&#x27;;n.resize(width,n.height)}parent.appendChild(n);return n;}
+function trackedClone(n){const c=keep(n.clone());for(const child of c.findAll(()=&gt;true))createdNodeIds.push(child.id);return c;}
+function props(i,values){const main=i.mainComponent,owner=main.parent.type===&#x27;COMPONENT_SET&#x27;?main.parent:main;const defs=owner.componentPropertyDefinitions,result={};for(const [k,v]of Object.entries(values)){const real=Object.keys(defs).find(key=&gt;key.split(&#x27;#&#x27;)[0]===k);if(real)result[real]=v}if(Object.keys(result).length){i.setProperties(result);touch(i)}return i;}
+const fp=figma.root.children.find(p=&gt;p.name===&#x27;01 Foundations&#x27;);await goPage(fp);
+for(const t of fp.findAllWithCriteria({types:[&#x27;TEXT&#x27;]})){
+ if(t.fontName.family===&#x27;SF Pro&#x27;){t.fontName={family:&#x27;Noto Sans&#x27;,style:({Semibold:&#x27;SemiBold&#x27;,Heavy:&#x27;ExtraBold&#x27;})[t.fontName.style]||t.fontName.style};touch(t)}
+ if(t.characters.includes(&#x27;SF Pro for Latin&#x27;)){t.characters=&#x27;Typography: system-ui in code. Noto Sans for Latin; Noto Sans Thai UI in Figma.&#x27;;touch(t)}
+}
+const capture=await figma.getNodeByIdAsync(&#x27;4:2&#x27;);if(capture&amp;&amp;!capture.removed){removedNodeIds.push(capture.id);capture.remove()}
+const cp=figma.root.children.find(p=&gt;p.name===&#x27;02 Components&#x27;);await goPage(cp);
+const sets=Object.fromEntries(cp.children.map(n=&gt;[n.name,n]));
+for(const comp of sets.MonthTimeline.children.filter(c=&gt;c.variantProperties.Lifecycle===&#x27;Closed&#x27;)){const button=comp.findOne(n=&gt;n.name===&#x27;Action / Snapshot&#x27;);if(button){button.visible=false;touch(button)}}
+for(const comp of sets.MoneyField.children){const box=comp.children.find(n=&gt;n.name===&#x27;Input&#x27;);box.layoutSizingHorizontal=&#x27;FILL&#x27;;touch(box);const t=box.children.find(n=&gt;n.type===&#x27;TEXT&#x27;);t.textAutoResize=&#x27;HEIGHT&#x27;;t.resize(394,26);t.layoutSizingHorizontal=&#x27;FILL&#x27;;touch(t)}
+for(const comp of sets.IconButton.children.filter(c=&gt;c.variantProperties.Type===&#x27;Theme&#x27;&amp;&amp;c.variantProperties.Theme===&#x27;Light&#x27;)){const t=comp.findOne(n=&gt;n.type===&#x27;TEXT&#x27;);t.characters=&#x27;☀︎&#x27;;touch(t)}
+for(const name of [&#x27;Button/Primary&#x27;,&#x27;Button/Secondary&#x27;])for(const comp of sets[name].children){const v=comp.variantProperties;if(v.State===&#x27;Hover&#x27;||v.State===&#x27;Focus&#x27;){const color=C[v.Theme][&#x27;surface-muted&#x27;].resolveForConsumer(comp).value;comp.effects=[{type:&#x27;DROP_SHADOW&#x27;,color,offset:{x:0,y:0},radius:0,spread:3,visible:true,blendMode:&#x27;NORMAL&#x27;}];touch(comp)}}
+for(const comp of sets.StatusBadge.children.filter(c=&gt;c.variantProperties.State===&#x27;inconsistent&#x27;)){
+ comp.strokeWeight=1;touch(comp);if(!comp.children.some(n=&gt;n.name===&#x27;Double border&#x27;)){const inside=layout(&#x27;Double border&#x27;,&#x27;HORIZONTAL&#x27;);inside.resize(comp.width-4,comp.height-4);inside.primaryAxisSizingMode=inside.counterAxisSizingMode=&#x27;FIXED&#x27;;inside.cornerRadius=999;inside.strokes=[paint(comp.variantProperties.Theme,&#x27;state-strong&#x27;)];inside.strokeWeight=1;comp.insertChild(0,inside);inside.layoutPositioning=&#x27;ABSOLUTE&#x27;;inside.x=inside.y=2;inside.constraints={horizontal:&#x27;STRETCH&#x27;,vertical:&#x27;STRETCH&#x27;}}
+}
+for(const n of cp.findAll(c=&gt;(c.type===&#x27;FRAME&#x27;||c.type===&#x27;COMPONENT&#x27;)&amp;&amp;c.layoutMode===&#x27;HORIZONTAL&#x27;&amp;&amp;c.counterAxisSizingMode===&#x27;FIXED&#x27;&amp;&amp;Math.abs(c.height-100)&lt;.01&amp;&amp;c.width&gt;100)){if(n.findOne&amp;&amp;n.parent.type===&#x27;INSTANCE&#x27;)continue;n.primaryAxisSizingMode=&#x27;FIXED&#x27;;n.counterAxisSizingMode=&#x27;AUTO&#x27;;touch(n)}
+print(&#x27;COMPONENTS_READY&#x27;);
+const page=figma.root.children.find(p=&gt;p.name===&#x27;03 Screens &amp; Prototype&#x27;);await goPage(page);
+for(const n of page.children.filter(n=&gt;n.name.includes(&#x27; / Modal &#x27;)||n.name.includes(&#x27; / Calculation &#x27;))){removedNodeIds.push(n.id);n.remove()}
+for(const n of page.findAll(c=&gt;c.name.startsWith(&#x27;Hotspot / &#x27;))){removedNodeIds.push(n.id);n.remove()}
+
+for(const n of page.findAll(c=&gt;c.type===&#x27;FRAME&#x27;&amp;&amp;c.layoutMode===&#x27;HORIZONTAL&#x27;&amp;&amp;c.counterAxisSizingMode===&#x27;FIXED&#x27;&amp;&amp;Math.abs(c.height-100)&lt;.01&amp;&amp;c.width&gt;100)){n.primaryAxisSizingMode=&#x27;FIXED&#x27;;n.counterAxisSizingMode=&#x27;AUTO&#x27;;touch(n)}
+for(const id of [&#x27;3:3182&#x27;,&#x27;3:3228&#x27;,&#x27;3:3296&#x27;,&#x27;3:3342&#x27;,&#x27;3:3410&#x27;,&#x27;3:3456&#x27;]){const node=await figma.getNodeByIdAsync(id);if(node&amp;&amp;!node.removed){removedNodeIds.push(id);node.remove()}}
+const baseRoots=Object.fromEntries(page.children.filter(n=&gt;n.name.includes(&#x27; / &#x27;)&amp;&amp;!n.name.includes(&#x27; / Dialog / &#x27;)&amp;&amp;!n.name.includes(&#x27; / Modal &#x27;)&amp;&amp;!n.name.includes(&#x27; / Calculation &#x27;)).map(n=&gt;[n.name,n]));
+const panels=Object.fromEntries(page.children.filter(n=&gt;n.name.includes(&#x27; / Dialog / &#x27;)).map(n=&gt;[n.name,n]));
+const screen=(v,k,t=&#x27;Light&#x27;)=&gt;baseRoots[v+&#x27; / &#x27;+k+&#x27; / &#x27;+t];
+function setNameOfRoot(n,viewport,key,theme=&#x27;Light&#x27;){n.name=viewport+&#x27; / &#x27;+key+&#x27; / &#x27;+theme;page.appendChild(n);baseRoots[n.name]=n;return n;}
+function findText(n,text){return n.findOne(c=&gt;c.type===&#x27;TEXT&#x27;&amp;&amp;c.characters===text)}
+function ancestorInstance(n){for(let p=n.parent;p;p=p.parent)if(p.type===&#x27;INSTANCE&#x27;)return p;return null;}
+function named(n,name){return n.findOne(c=&gt;c.name===name)}
+function instanceOf(n,name){return n.findAllWithCriteria({types:[&#x27;INSTANCE&#x27;]}).filter(i=&gt;i.mainComponent&amp;&amp;i.mainComponent.parent&amp;&amp;i.mainComponent.parent.name===name)}
+function instantiate(parent,name,variants,values={}){const set=sets[name],main=set.children.find(c=&gt;c.type===&#x27;COMPONENT&#x27;&amp;&amp;Object.entries(variants).every(([k,v])=&gt;c.variantProperties[k]===v)),i=keep(main.createInstance());parent.appendChild(i);props(i,values);return i;}
+for(const n of Object.values(baseRoots)){
+ const viewport=n.name.split(&#x27; / &#x27;)[0],main=named(n,&#x27;Main content&#x27;);
+ if(viewport===&#x27;Mobile&#x27;){const nav=n.children.find(c=&gt;c.name===&#x27;Fixed bottom navigation&#x27;);if(nav){n.numberOfFixedChildren=1;touch(n)}}
+ if(/ \/ (Login|Start|Resume) \/ /.test(n.name)){for(const t of n.findAllWithCriteria({types:[&#x27;TEXT&#x27;]})){if([&#x27;เข้าสู่ระบบ&#x27;,&#x27;เริ่มบัญชีรายรับรายจ่าย&#x27;,&#x27;เริ่มติดตามจากเดือนนี้&#x27;].includes(t.characters)){t.textStyleId=TS[&#x27;Deledger/Thai/H1 Mobile&#x27;].id;touch(t)}}}
+ if(/ \/ (MonthEmpty|MonthError|MonthLoading) \/ /.test(n.name)){const h=named(n,&#x27;Page heading&#x27;);if(h){removedNodeIds.push(h.id);h.remove()}main.paddingTop=n.name.includes(&#x27;MonthLoading&#x27;)?20:44;touch(main)}
+ if(n.name.includes(&#x27;HistoryGap&#x27;)){const cover=named(n,&#x27;History cover&#x27;);const draft=instanceOf(cover,&#x27;StatusBadge&#x27;)[0];if(draft){removedNodeIds.push(draft.id);draft.remove()}const t=findText(cover,&#x27;ช่วงหยุดติดตาม&#x27;);if(t&amp;&amp;t.parent===cover){const index=cover.children.indexOf(t);const b=layout(&#x27;Tracking Gap badge&#x27;,&#x27;HORIZONTAL&#x27;);b.paddingLeft=b.paddingRight=10;b.paddingTop=b.paddingBottom=5;b.cornerRadius=999;b.strokes=[paint(&#x27;Light&#x27;,&#x27;state-muted&#x27;)];b.strokeWeight=1;cover.insertChild(index,b);txt(b,&#x27;ช่วงหยุดติดตาม&#x27;,&#x27;Badge&#x27;);removedNodeIds.push(t.id);t.remove()}}
+}
+for(const [name,panel]of Object.entries(panels))if(/ \/ (Add|AddFixed|Edit) \/ /.test(name)){
+ panel.paddingTop=panel.paddingRight=panel.paddingBottom=panel.paddingLeft=0;panel.fills=[];panel.strokes=[];panel.effects=[];touch(panel);
+ const ins=panel.children.find(n=&gt;n.type===&#x27;INSTANCE&#x27;);const mobile=name.startsWith(&#x27;Mobile&#x27;);if(mobile){ins.paddingTop=ins.paddingBottom=ins.paddingLeft=ins.paddingRight=22;ins.resize(366,ins.height);touch(ins)}
+ if(name.includes(&#x27; / Add&#x27;)){for(const i of instanceOf(panel,&#x27;MoneyField&#x27;)){const label=findText(i,&#x27;รายละเอียดรายจ่าย&#x27;);if(label)props(i,{Value:&#x27;อินเทอร์เน็ต&#x27;});const amount=findText(i,&#x27;ยอดประจำ&#x27;);if(amount)props(i,{Value:&#x27;490&#x27;})}}
+}
+// Expense confirmation outcomes preserve previously confirmed facts.
+for(const viewport of [&#x27;Desktop&#x27;,&#x27;Mobile&#x27;])for(const [key,fixed,variable,total]of [[&#x27;MonthVariablePaid&#x27;,false,true,&#x27;1,200.00&#x27;],[&#x27;MonthAllPaid&#x27;,true,true,&#x27;7,200.00&#x27;]]){
+ const name=viewport+&#x27; / &#x27;+key+&#x27; / Light&#x27;;if(baseRoots[name])continue;
+ const n=setNameOfRoot(trackedClone(screen(viewport,&#x27;Month&#x27;)),viewport,key);
+ for(const i of instanceOf(n,&#x27;ExpenseChip&#x27;))props(i,{State:(i.variantProperties.Kind===&#x27;Fixed&#x27;?fixed:variable)?&#x27;Confirmed&#x27;:&#x27;Unconfirmed&#x27;,Amount:i.variantProperties.Kind===&#x27;Fixed&#x27;?&#x27;6000.00&#x27;:&#x27;1200.00&#x27;});
+ for(const i of instanceOf(n,&#x27;MonthTimeline&#x27;))props(i,{Details:total});
+}
+for(const viewport of [&#x27;Desktop&#x27;,&#x27;Mobile&#x27;]){
+ const name=viewport+&#x27; / MonthAdded / Light&#x27;;if(baseRoots[name])continue;const n=setNameOfRoot(trackedClone(screen(viewport,&#x27;Month&#x27;)),viewport,&#x27;MonthAdded&#x27;);
+ const list=named(n,&#x27;Expense list&#x27;);instantiate(list,&#x27;ExpenseChip&#x27;,{Theme:&#x27;Light&#x27;,Kind:&#x27;Variable&#x27;,State:&#x27;Unconfirmed&#x27;},{Name:&#x27;อินเทอร์เน็ต&#x27;,Amount:&#x27;กรอกยอด&#x27;});
+ const manager=named(n,&#x27;ExpenseSetupManager&#x27;);const row=instantiate(manager,&#x27;ExpenseSetupRow&#x27;,{Theme:&#x27;Light&#x27;,Kind:&#x27;Variable&#x27;,Paused:&#x27;No&#x27;},{Name:&#x27;อินเทอร์เน็ต&#x27;});row.resize(viewport===&#x27;Mobile&#x27;?308:1054,row.height);const g=named(row,&#x27;Expense definition&#x27;);g.resize(viewport===&#x27;Mobile&#x27;?148:894,g.height);touch(g);
+}
+for(const root of Object.values(baseRoots)){root.reactions=[];touch(root)}
+const links=[],modalRoots={};
+async function link(node,destination,trigger={type:&#x27;ON_CLICK&#x27;},resetScroll=false){
+ if(!node||!destination||node.visible===false)return;
+ let sourceRoot=node;while(sourceRoot.parent&amp;&amp;sourceRoot.parent.type!==&#x27;PAGE&#x27;)sourceRoot=sourceRoot.parent;if(sourceRoot.id===destination.id)return;
+ let inInstance=node.type===&#x27;INSTANCE&#x27;;for(let p=node.parent;p&amp;&amp;p.type!==&#x27;PAGE&#x27;;p=p.parent)if(p.type===&#x27;INSTANCE&#x27;)inInstance=true;
+ if(inInstance){let root=node;while(root.parent&amp;&amp;root.parent.type!==&#x27;PAGE&#x27;)root=root.parent;const box=node.absoluteBoundingBox,origin=root.absoluteTransform;const name=&#x27;Hotspot / &#x27;+node.name+&#x27; :: &#x27;+node.id;let hit=root.children.find(n=&gt;n.name===name);if(!hit){hit=keep(figma.createRectangle());hit.name=name;root.appendChild(hit);hit.layoutPositioning=&#x27;ABSOLUTE&#x27;;hit.fills=[{type:&#x27;SOLID&#x27;,color:{r:0,g:0,b:0},opacity:.001}]}hit.resize(Math.max(1,box.width),Math.max(1,box.height));hit.x=box.x-origin[0][2];hit.y=box.y-origin[1][2];node=hit;}
+ const action={type:&#x27;NODE&#x27;,destinationId:destination.id,navigation:&#x27;NAVIGATE&#x27;,transition:null,resetScrollPosition:resetScroll};try{node.reactions=[{trigger,actions:[action]}]}catch(e){throw Error(&#x27;LINK &#x27;+node.name+&#x27; [&#x27;+node.id+&#x27;] -&gt; &#x27;+destination.name+&#x27; [&#x27;+destination.id+&#x27;]: &#x27;+e)};touch(node);links.push({from:node.id,to:destination.id,trigger:trigger.type});
+}
+function recolor(root,theme){if(theme===&#x27;Light&#x27;)return;for(const i of root.findAllWithCriteria({types:[&#x27;INSTANCE&#x27;]})){if(i.removed)continue;if(i.variantProperties&amp;&amp;i.variantProperties.Theme)props(i,{Theme:theme})}for(const n of [root,...root.findAll(()=&gt;true)])for(const prop of [&#x27;fills&#x27;,&#x27;strokes&#x27;])if(prop in n&amp;&amp;Array.isArray(n[prop])){const updated=n[prop].map(p=&gt;{const id=p.boundVariables&amp;&amp;p.boundVariables.color&amp;&amp;p.boundVariables.color.id;const v=vars.find(v=&gt;v.id===id);return v&amp;&amp;v.variableCollectionId===cols.find(c=&gt;c.name===&#x27;Deledger / Color / Light&#x27;).id?figma.variables.setBoundVariableForPaint(p,&#x27;color&#x27;,C.Dark[v.name.replace(&#x27;color/&#x27;,&#x27;&#x27;)]):p});n[prop]=updated;touch(n)}}
+async function modal(base,kind,saveTarget){
+ const [viewport,key,theme]=base.name.split(&#x27; / &#x27;),name=viewport+&#x27; / Modal &#x27;+kind+&#x27; from &#x27;+key+&#x27; / &#x27;+theme;
+ if(modalRoots[name])return modalRoots[name];const n=trackedClone(base);n.name=name;page.appendChild(n);n.numberOfFixedChildren=0;n.overflowDirection=&#x27;NONE&#x27;;modalRoots[name]=n;
+ const mask=keep(figma.createRectangle());mask.name=&#x27;Dismiss backdrop&#x27;;mask.resize(n.width,n.height);mask.fills=[{type:&#x27;SOLID&#x27;,color:{r:23/255,g:23/255,b:23/255},opacity:.65}];n.appendChild(mask);mask.layoutPositioning=&#x27;ABSOLUTE&#x27;;mask.x=mask.y=0;
+ const panel=trackedClone(panels[viewport+&#x27; / Dialog / &#x27;+kind+&#x27; / Light&#x27;]);n.appendChild(panel);panel.layoutPositioning=&#x27;ABSOLUTE&#x27;;panel.visible=true;panel.name=&#x27;Modal panel&#x27;;panel.x=(n.width-panel.width)/2;panel.y=Math.max(12,(n.height-panel.height)/2);if(panel.height&gt;n.height-24){panel.resize(panel.width,n.height-24);panel.primaryAxisSizingMode=&#x27;FIXED&#x27;;panel.overflowDirection=&#x27;VERTICAL&#x27;;panel.clipsContent=true}recolor(panel,theme);
+ await link(mask,base);await link(n,base,{type:&#x27;ON_KEY_DOWN&#x27;,device:&#x27;KEYBOARD&#x27;,keyCodes:[27]});
+ for(const b of panel.findAll(c=&gt;c.name===&#x27;Action / Dismiss&#x27;))await link(b,base);
+ for(const b of panel.findAll(c=&gt;c.name===&#x27;Action / Save&#x27;))await link(b,saveTarget||base);
+ if(kind===&#x27;Add&#x27;||kind===&#x27;AddFixed&#x27;){const variable=named(panel,&#x27;Choose / Variable&#x27;),fixed=named(panel,&#x27;Choose / Fixed&#x27;);const alt=kind===&#x27;Add&#x27;?&#x27;AddFixed&#x27;:&#x27;Add&#x27;;if(kind===&#x27;Add&#x27;)await link(fixed,await modal(base,alt,saveTarget));else await link(variable,modalRoots[viewport+&#x27; / Modal Add from &#x27;+key+&#x27; / &#x27;+theme]);}
+ if(kind===&#x27;VariableError&#x27;){const field=instanceOf(panel,&#x27;MoneyField&#x27;)[0];await link(field,await modal(base,&#x27;Variable&#x27;,saveTarget));}
+ if(kind===&#x27;Theme&#x27;){
+  for(const choice of [&#x27;System&#x27;,&#x27;Light&#x27;,&#x27;Dark&#x27;])await link(named(panel,&#x27;Choose theme / &#x27;+choice),screen(viewport,&#x27;Month&#x27;,choice===&#x27;Dark&#x27;?&#x27;Dark&#x27;:&#x27;Light&#x27;));
+  panel.x=n.width-panel.width-(viewport===&#x27;Mobile&#x27;?20:52);panel.y=viewport===&#x27;Mobile&#x27;?70:82;
+ }
+ return n;
+}
+for(const base of Object.values(baseRoots)){
+ const [viewport,key,theme]=base.name.split(&#x27; / &#x27;),month=screen(viewport,&#x27;Month&#x27;,theme),main=named(base,&#x27;Main content&#x27;);
+ for(const nav of base.findAll(c=&gt;c.name.startsWith(&#x27;Navigate / &#x27;))){const dest=nav.name.split(&#x27; / &#x27;)[1];await link(nav,screen(viewport,dest===&#x27;Month&#x27;?&#x27;Month&#x27;:dest, dest===&#x27;Month&#x27;?theme:&#x27;Light&#x27;),undefined,true)}
+ await link(named(base,&#x27;Brand&#x27;),month,undefined,true);
+ const logout=findText(base,&#x27;ออกจากระบบ&#x27;);if(logout)await link(ancestorInstance(logout),screen(viewport,&#x27;Login&#x27;),undefined,true);
+ const icon=instanceOf(base,&#x27;IconButton&#x27;).find(i=&gt;i.variantProperties.Type===&#x27;Theme&#x27;);if(icon)await link(icon,await modal(base,&#x27;Theme&#x27;));
+ if(key===&#x27;Login&#x27;||key===&#x27;Start&#x27;||key===&#x27;Resume&#x27;){const text=findText(base,key===&#x27;Login&#x27;?&#x27;ดำเนินการต่อ&#x27;:key===&#x27;Resume&#x27;?&#x27;เริ่มติดตามต่อ&#x27;:&#x27;เริ่มเดือนแรก&#x27;);await link(ancestorInstance(text),screen(viewport,key===&#x27;Login&#x27;?&#x27;Start&#x27;:&#x27;Month&#x27;),undefined,true)}
+ if(key.startsWith(&#x27;Profile&#x27;)){const text=findText(base,&#x27;บันทึกข้อมูล&#x27;);await link(ancestorInstance(text),screen(viewport,&#x27;ProfileSaved&#x27;))}
+ if(key.startsWith(&#x27;History&#x27;)){await link(named(base,&#x27;Previous cover&#x27;),screen(viewport,&#x27;History&#x27;));await link(named(base,&#x27;Gap cover&#x27;),screen(viewport,&#x27;HistoryGap&#x27;));for(const tab of instanceOf(base,&#x27;HistoryTab&#x27;)){const gap=tab.variantProperties.Gap===&#x27;Yes&#x27;;await link(tab,screen(viewport,gap?&#x27;HistoryGap&#x27;:&#x27;History&#x27;))}const refresh=findText(base,&#x27;โหลดล่าสุด&#x27;);if(refresh)await link(ancestorInstance(refresh),base)}
+ const history=findText(base,&#x27;ดูประวัติ&#x27;);if(history)await link(ancestorInstance(history),screen(viewport,&#x27;History&#x27;),undefined,true);
+ if(key===&#x27;MonthEmpty&#x27;){await link(ancestorInstance(findText(base,&#x27;เริ่มเดือนแรก&#x27;)),screen(viewport,&#x27;Start&#x27;));continue}
+ if(key===&#x27;MonthError&#x27;){await link(ancestorInstance(findText(base,&#x27;ลองใหม่&#x27;)),screen(viewport,&#x27;Month&#x27;));continue}
+ if(key===&#x27;MonthLoading&#x27;){await link(base,screen(viewport,&#x27;Month&#x27;),{type:&#x27;AFTER_TIMEOUT&#x27;,timeout:1.2});continue}
+ const isMonth=key.startsWith(&#x27;Month&#x27;)||key===&#x27;CloseReady&#x27;;if(!isMonth)continue;
+ for(const kind of [&#x27;Income&#x27;,&#x27;Snapshot&#x27;,&#x27;Ending&#x27;]){const button=named(base,&#x27;Action / &#x27;+kind);const dest=kind===&#x27;Ending&#x27;?screen(viewport,&#x27;MonthEnding&#x27;):base;await link(button,await modal(base,kind,dest))}
+ const fixedPaid=[&#x27;MonthPaid&#x27;,&#x27;MonthAllPaid&#x27;,&#x27;MonthEnding&#x27;,&#x27;MonthClosed&#x27;,&#x27;CloseReady&#x27;].includes(key),variablePaid=[&#x27;MonthVariablePaid&#x27;,&#x27;MonthAllPaid&#x27;].includes(key);
+ for(const chip of instanceOf(base,&#x27;ExpenseChip&#x27;)){const kind=chip.variantProperties.Kind;if(kind===&#x27;Fixed&#x27;){await link(chip,await modal(base,fixedPaid?&#x27;Confirmed&#x27;:&#x27;Fixed&#x27;,screen(viewport,fixedPaid?(variablePaid?&#x27;MonthVariablePaid&#x27;:&#x27;Month&#x27;):(variablePaid?&#x27;MonthAllPaid&#x27;:&#x27;MonthPaid&#x27;))))}else await link(chip,await modal(base,&#x27;Variable&#x27;,screen(viewport,fixedPaid?&#x27;MonthAllPaid&#x27;:&#x27;MonthVariablePaid&#x27;)))}
+ const add=findText(base,&#x27;เพิ่มรายการ&#x27;);if(add)await link(ancestorInstance(add),await modal(base,&#x27;Add&#x27;,screen(viewport,&#x27;MonthAdded&#x27;)));
+ for(const row of instanceOf(base,&#x27;ExpenseSetupRow&#x27;)){const edit=instanceOf(row,&#x27;IconButton&#x27;).find(i=&gt;i.variantProperties.Type===&#x27;Edit&#x27;),pause=instanceOf(row,&#x27;IconButton&#x27;).find(i=&gt;i.variantProperties.Type===&#x27;Pause&#x27;);await link(edit,await modal(base,&#x27;Edit&#x27;,base));await link(pause,screen(viewport,&#x27;MonthPaused&#x27;)||base)}
+ const close=named(base,&#x27;Action / Close&#x27;);if(close)await link(close,await modal(base,&#x27;Close&#x27;,screen(viewport,&#x27;MonthClosed&#x27;)));
+ const calc=named(base,&#x27;Calculation toggle&#x27;);if(calc){const name=viewport+&#x27; / Calculation from &#x27;+key+&#x27; / &#x27;+theme;let expanded=page.children.find(n=&gt;n.name===name);if(!expanded){expanded=trackedClone(base);expanded.name=name;page.appendChild(expanded);const summary=instanceOf(expanded,&#x27;MonthSummary&#x27;)[0];const note=layout(&#x27;Monthly Spending formula&#x27;,&#x27;VERTICAL&#x27;,viewport===&#x27;Mobile&#x27;?308:529);note.itemSpacing=8;main;const expMain=named(expanded,&#x27;Main content&#x27;);expMain.appendChild(note);txt(note,&#x27;ยอดตั้งต้น + รายรับ − &#x27;+(key===&#x27;MonthEnding&#x27;?&#x27;ยอดปลาย&#x27;:&#x27;Snapshot ล่าสุด&#x27;)+&#x27; = &#x27;+(key===&#x27;MonthEnding&#x27;?&#x27;รายจ่ายทั้งเดือน&#x27;:&#x27;รายจ่ายโดยประมาณ&#x27;),&#x27;Body&#x27;,theme,&#x27;ink&#x27;,note.width);txt(note,&#x27;รายละเอียดรายจ่ายอธิบายยอดรวมนี้ ไม่ได้นำมาบวกเพิ่ม&#x27;,&#x27;Helper&#x27;,theme,&#x27;muted-ink&#x27;,note.width);await link(named(expanded,&#x27;Calculation toggle&#x27;),base)}await link(calc,expanded)}
+}
+for(const root of Object.values(baseRoots).filter(n=&gt;n.name.startsWith(&#x27;Mobile&#x27;))){const nav=root.children.find(n=&gt;n.name===&#x27;Fixed bottom navigation&#x27;);if(nav){const hits=root.children.filter(n=&gt;n.name.startsWith(&#x27;Hotspot / Navigate /&#x27;));root.appendChild(nav);for(const hit of hits)root.appendChild(hit);root.numberOfFixedChildren=1+hits.length;touch(root)}}
+// Retain panels as source specimens within the component library, outside prototype roots.
+for(const panel of Object.values(panels)){panel.visible=false;touch(panel)}
+let desktopIndex=0,mobileIndex=0,modalIndex=0;
+for(const n of page.children.filter(n=&gt;n.type===&#x27;FRAME&#x27;&amp;&amp;n.visible)){
+ if(n.name.startsWith(&#x27;Mobile&#x27;)){n.x=6500+(mobileIndex%5)*510;n.y=160+Math.floor(mobileIndex/5)*1000;mobileIndex++}
+ else if(n.name.includes(&#x27; / Modal &#x27;)||n.name.includes(&#x27; / Calculation &#x27;)){n.x=120+(modalIndex%4)*1420;n.y=7600+Math.floor(modalIndex/4)*1040;modalIndex++}
+ else{n.x=120+(desktopIndex%4)*1420;n.y=160+Math.floor(desktopIndex/4)*1040;desktopIndex++}touch(n)
+}
+page.flowStartingPoints=[
+ {nodeId:screen(&#x27;Desktop&#x27;,&#x27;Login&#x27;).id,name:&#x27;Desktop · Login → first month&#x27;},
+ {nodeId:screen(&#x27;Desktop&#x27;,&#x27;Month&#x27;).id,name:&#x27;Desktop · Monthly tracking&#x27;},
+ {nodeId:screen(&#x27;Mobile&#x27;,&#x27;Login&#x27;).id,name:&#x27;Mobile · Login → first month&#x27;},
+ {nodeId:screen(&#x27;Mobile&#x27;,&#x27;Month&#x27;).id,name:&#x27;Mobile · Monthly tracking&#x27;},
+ {nodeId:screen(&#x27;Desktop&#x27;,&#x27;CloseReady&#x27;).id,name:&#x27;Manual Close · 31 October scenario&#x27;},
+ {nodeId:screen(&#x27;Desktop&#x27;,&#x27;MonthEmpty&#x27;).id,name:&#x27;Empty · First month required&#x27;},
+ {nodeId:screen(&#x27;Desktop&#x27;,&#x27;MonthError&#x27;).id,name:&#x27;Error · Retry&#x27;},
+ {nodeId:screen(&#x27;Desktop&#x27;,&#x27;Resume&#x27;).id,name:&#x27;Resume after Tracking Gap&#x27;}
+];touch(page);
+const missingFonts=page.findAllWithCriteria({types:[&#x27;TEXT&#x27;]}).filter(n=&gt;n.hasMissingFont).map(n=&gt;({id:n.id,text:n.characters}));
+const roots=page.children.filter(n=&gt;n.type===&#x27;FRAME&#x27;&amp;&amp;n.visible),counts={};for(const n of page.findAll(()=&gt;true))counts[n.type]=(counts[n.type]||0)+1;
+const brokenLinks=links.filter(l=&gt;!figma.getNodeById(l.to));
+const images=page.findAll(n=&gt;&#x27;fills&#x27;in n&amp;&amp;Array.isArray(n.fills)&amp;&amp;n.fills.some(p=&gt;p.type===&#x27;IMAGE&#x27;)).map(n=&gt;n.id);
+figma.currentPage.selection=[screen(&#x27;Desktop&#x27;,&#x27;Month&#x27;)];figma.viewport.scrollAndZoomIntoView([screen(&#x27;Desktop&#x27;,&#x27;Month&#x27;)]);
+print(JSON.stringify({status:&#x27;DELEDGER_PROTOTYPE_READY&#x27;,roots:roots.length,links:links.length,missingFonts,brokenLinks,images,counts,flows:page.flowStartingPoints,createdCount:createdNodeIds.length,mutatedCount:mutatedNodeIds.length,removedNodeIds}));
+</pre></body></html>

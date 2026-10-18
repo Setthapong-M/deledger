@@ -1,0 +1,41 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body><pre>// Continue the existing editable file, keeping base frame IDs intact.
+const createdNodeIds=[],mutatedNodeIds=[],removedNodeIds=[];
+const keep=n=&gt;{createdNodeIds.push(n.id);return n}, touch=n=&gt;{mutatedNodeIds.push(n.id);return n};
+const p=figma.root.children.find(n=&gt;n.name===&#x27;03 Screens &amp; Prototype&#x27;);await figma.setCurrentPageAsync(p);
+const styles=await figma.getLocalTextStylesAsync();await Promise.all(styles.map(s=&gt;figma.loadFontAsync(s.fontName)));
+const TS=Object.fromEntries(styles.map(s=&gt;[s.name,s]));
+const cp=figma.root.children.find(n=&gt;n.name===&#x27;02 Components&#x27;);const sets=Object.fromEntries(cp.children.filter(n=&gt;n.type===&#x27;COMPONENT_SET&#x27;).map(n=&gt;[n.name,n]));
+const vars=await figma.variables.getLocalVariablesAsync(),cols=await figma.variables.getLocalVariableCollectionsAsync();
+const C={};for(const theme of [&#x27;Light&#x27;,&#x27;Dark&#x27;])C[theme]=Object.fromEntries(vars.filter(v=&gt;v.variableCollectionId===cols.find(c=&gt;c.name===&#x27;Deledger / Color / &#x27;+theme).id).map(v=&gt;[v.name.replace(&#x27;color/&#x27;,&#x27;&#x27;),v]));
+const paint=(theme,key)=&gt;figma.variables.setBoundVariableForPaint({type:&#x27;SOLID&#x27;,color:{r:0,g:0,b:0}},&#x27;color&#x27;,C[theme][key]);
+const named=(root,name)=&gt;root.findOne(n=&gt;n.name===name), texts=root=&gt;root.findAllWithCriteria({types:[&#x27;TEXT&#x27;]});
+const text=(root,value)=&gt;texts(root).find(n=&gt;n.characters===value);
+const instances=(root,set)=&gt;root.findAllWithCriteria({types:[&#x27;INSTANCE&#x27;]}).filter(i=&gt;i.mainComponent?.parent?.name===set);
+function props(i,values){if(!i||i.removed)return;const main=i.mainComponent,owner=main.parent.type===&#x27;COMPONENT_SET&#x27;?main.parent:main;const result={};for(const [key,value]of Object.entries(values)){const real=Object.keys(owner.componentPropertyDefinitions).find(k=&gt;k.split(&#x27;#&#x27;)[0]===key);if(real)result[real]=value}i.setProperties(result);touch(i)}
+function clone(root,name){let n=p.children.find(n=&gt;n.name===name);if(n)return n;n=keep(root.clone());for(const c of n.findAll(()=&gt;true))createdNodeIds.push(c.id);n.name=name;p.appendChild(n);return n}
+function screen(v,key,t=&#x27;Light&#x27;){return p.children.find(n=&gt;n.name===v+&#x27; / &#x27;+key+&#x27; / &#x27;+t)}
+function top(n){while(n.parent&amp;&amp;n.parent.type!==&#x27;PAGE&#x27;)n=n.parent;return n}
+function button(root,label){const t=text(root,label);if(!t)return null;for(let n=t.parent;n&amp;&amp;n.type!==&#x27;PAGE&#x27;;n=n.parent)if(n.type===&#x27;INSTANCE&#x27;)return n;return t}
+function layout(parent,name,width){const n=keep(figma.createFrame());n.name=name;n.layoutMode=&#x27;VERTICAL&#x27;;n.fills=[];n.resize(width,100);n.primaryAxisSizingMode=&#x27;AUTO&#x27;;n.counterAxisSizingMode=&#x27;FIXED&#x27;;n.itemSpacing=8;parent.appendChild(n);return n}
+function txt(parent,value,role=&#x27;Body&#x27;,theme=&#x27;Light&#x27;){const n=keep(figma.createText()),s=TS[&#x27;Deledger/&#x27;+(/[\u0e00-\u0e7f]/.test(value)?&#x27;Thai&#x27;:&#x27;Latin&#x27;)+&#x27;/&#x27;+role];n.fontName=s.fontName;n.textStyleId=s.id;n.characters=value;n.textAutoResize=&#x27;HEIGHT&#x27;;n.resize(parent.width,26);n.fills=[paint(theme,&#x27;ink&#x27;)];parent.appendChild(n);return n}
+let writtenLinks=0;
+function link(node,dest,trigger={type:&#x27;ON_CLICK&#x27;}){if(!node||!dest||node.visible===false)return;const root=top(node);if(root.id===dest.id)return;let hit=node;
+if(node!==root){const name=&#x27;Hotspot / &#x27;+node.name+&#x27; :: &#x27;+node.id;hit=root.children.find(n=&gt;n.name===name);if(!hit){hit=keep(figma.createRectangle());hit.name=name;root.appendChild(hit);hit.layoutPositioning=&#x27;ABSOLUTE&#x27;;hit.fills=[{type:&#x27;SOLID&#x27;,color:{r:0,g:0,b:0},opacity:.001}]}
+const b=node.absoluteBoundingBox,o=root.absoluteBoundingBox;hit.resize(Math.max(1,b.width),Math.max(1,b.height));hit.x=b.x-o.x;hit.y=b.y-o.y;}
+hit.reactions=[...hit.reactions.filter(r=&gt;r.trigger.type!==trigger.type||(trigger.type===&#x27;ON_KEY_DOWN&#x27;&amp;&amp;JSON.stringify(r.trigger.keyCodes)!==JSON.stringify(trigger.keyCodes))),{trigger,actions:[{type:&#x27;NODE&#x27;,destinationId:dest.id,navigation:&#x27;NAVIGATE&#x27;,transition:null,resetScrollPosition:true}]}];touch(hit);writtenLinks++}
+function modal(v,key,kind,t=&#x27;Light&#x27;){return p.children.find(n=&gt;n.name===v+&#x27; / Modal &#x27;+kind+&#x27; from &#x27;+key+&#x27; / &#x27;+t)}
+function routeSave(m,dest){const panel=named(m,&#x27;Modal panel&#x27;);for(const n of panel.findAll(n=&gt;n.name===&#x27;Action / Save&#x27;))link(n,dest)}
+function color(root,theme){for(const i of root.findAllWithCriteria({types:[&#x27;INSTANCE&#x27;]}))if(!i.removed&amp;&amp;i.variantProperties?.Theme)props(i,{Theme:theme});for(const n of [root,...root.findAll(()=&gt;true)])for(const property of [&#x27;fills&#x27;,&#x27;strokes&#x27;])if(property in n&amp;&amp;Array.isArray(n[property])){n[property]=n[property].map(f=&gt;{const v=vars.find(v=&gt;v.id===f.boundVariables?.color?.id);if(!v||!v.name.startsWith(&#x27;color/&#x27;))return f;const dest=C[theme][v.name.replace(&#x27;color/&#x27;,&#x27;&#x27;)];return dest?figma.variables.setBoundVariableForPaint(f,&#x27;color&#x27;,dest):f});touch(n)}}
+function refreshHotspots(root){for(const h of root.children.filter(n=&gt;n.name.startsWith(&#x27;Hotspot / &#x27;))){const [name,id]=h.name.slice(10).split(&#x27; :: &#x27;);let source;try{source=figma.getNodeById(id);if(source?.removed)source=null}catch{};if(source&amp;&amp;top(source)!==root){const path=[];for(let n=source;n.parent&amp;&amp;n.parent.type!==&#x27;PAGE&#x27;;n=n.parent)path.unshift(n.name);let n=root;for(const part of path)n=n?.children?.find(c=&gt;c.name===part);source=n}if(!source)source=root.findOne(n=&gt;n.name===name&amp;&amp;!n.name.startsWith(&#x27;Hotspot / &#x27;));if(source){const b=source.absoluteBoundingBox,o=root.absoluteBoundingBox;h.resize(Math.max(1,b.width),Math.max(1,b.height));h.x=b.x-o.x;h.y=b.y-o.y;touch(h)}}}
+
+
+for(const root of p.children.filter(n=&gt;n.type===&#x27;FRAME&#x27;&amp;&amp;n.visible)){
+ const chips=instances(root,&#x27;ExpenseChip&#x27;);for(let index=0;index&lt;chips.length;index++){const chip=chips[index],kind=chip.variantProperties.Kind,state=chip.variantProperties.State;const added=index&gt;=2;const label=added?&#x27;อินเทอร์เน็ต&#x27;:kind===&#x27;Fixed&#x27;?(root.name.includes(&#x27;MonthEdited&#x27;)?&#x27;ค่าเช่าห้อง&#x27;:&#x27;ค่าเช่า&#x27;):(root.name.includes(&#x27;MonthVariableEdited&#x27;)?&#x27;ค่าไฟฟ้า&#x27;:&#x27;ค่าไฟ&#x27;);const amount=kind===&#x27;Fixed&#x27;?(added?&#x27;490.00&#x27;:root.name.includes(&#x27;MonthEdited&#x27;)?&#x27;6500.00&#x27;:&#x27;6000.00&#x27;):state===&#x27;Confirmed&#x27;?&#x27;1200.00&#x27;:&#x27;กรอกยอด&#x27;;props(chip,{Name:label,Amount:amount})}
+ const rows=instances(root,&#x27;ExpenseSetupRow&#x27;);for(let index=0;index&lt;rows.length;index++){const row=rows[index],kind=row.variantProperties.Kind;props(row,{Name:index&gt;=2?&#x27;อินเทอร์เน็ต&#x27;:kind===&#x27;Fixed&#x27;?(root.name.includes(&#x27;MonthEdited&#x27;)?&#x27;ค่าเช่าห้อง&#x27;:&#x27;ค่าเช่า&#x27;):(root.name.includes(&#x27;MonthVariableEdited&#x27;)?&#x27;ค่าไฟฟ้า&#x27;:&#x27;ค่าไฟ&#x27;)})}
+ for(const summary of instances(root,&#x27;MonthSummary&#x27;))if(summary.variantProperties.State===&#x27;Reconciled&#x27;)props(summary,{Ending:&#x27;15,000.00&#x27;});
+ for(const banner of instances(root,&#x27;FeedbackBanner&#x27;))if(banner.variantProperties.Tone===&#x27;Warning&#x27;)props(banner,{Message:&#x27;บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง&#x27;});
+ refreshHotspots(root);
+ if(root.name.startsWith(&#x27;Mobile&#x27;)&amp;&amp;!root.name.includes(&#x27; / Modal &#x27;)){const nav=root.children.find(n=&gt;n.name===&#x27;Fixed bottom navigation&#x27;);if(nav){const hits=root.children.filter(n=&gt;n.name.startsWith(&#x27;Hotspot / Navigate /&#x27;));root.appendChild(nav);for(const hit of hits)root.appendChild(hit);root.numberOfFixedChildren=1+hits.length;touch(root)}}
+}
+print(JSON.stringify({status:&#x27;SCENARIO_DATA_VERIFIED&#x27;,mutatedNodeIds}));
+</pre></body></html>
