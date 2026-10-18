@@ -3,7 +3,7 @@ ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 WORKDIR /app
 RUN apt-get update && apt-get install --no-install-recommends --yes openssl ca-certificates && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@11.1.3 --activate
+RUN corepack enable && corepack prepare pnpm@10.34.7 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY api/package.json api/package.json
 COPY web/package.json web/package.json
@@ -17,7 +17,7 @@ ENV PATH=$PNPM_HOME:$PATH
 ENV NODE_ENV=production
 WORKDIR /app
 RUN apt-get update && apt-get install --no-install-recommends --yes openssl ca-certificates && rm -rf /var/lib/apt/lists/*
-RUN corepack enable && corepack prepare pnpm@11.1.3 --activate
+RUN corepack enable && corepack prepare pnpm@10.34.7 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY api/package.json api/package.json
 COPY web/package.json web/package.json

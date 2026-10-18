@@ -2,8 +2,12 @@ packages:
   - web
   - api
 
-allowBuilds:
-  '@prisma/engines': true
-  esbuild: true
-  prisma: true
-  unrs-resolver: true
+onlyBuiltDependencies:
+  - '@prisma/engines'
+  - esbuild
+  - prisma
+  - unrs-resolver
+
+overrides:
+  typescript-eslint: 8.46.0
+  unrs-resolver: 1.11.1

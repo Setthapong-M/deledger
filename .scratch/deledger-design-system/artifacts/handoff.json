@@ -1,0 +1,38 @@
+{
+  "completed_on": "2026-10-13",
+  "time_zone": "Asia/Bangkok",
+  "figma_file": "https://www.figma.com/design/EItK4iWFuxFqnTg4t2BM4F",
+  "prototype": "https://www.figma.com/proto/EItK4iWFuxFqnTg4t2BM4F/Deledger?node-id=8-78&page-id=7%3A220&starting-point-node-id=8%3A78&scaling=scale-down&show-proto-sidebar=1",
+  "structural_verification": "PASS: all 329 scenario frames reachable from 12 starting flows; 5,151 valid connections; no missing fonts, broken targets, rasterized UI, or invalid mobile navigation geometry.",
+  "playback_verified": [
+    "Mobile login -> first month -> monthly overview",
+    "Desktop empty -> first month -> overview",
+    "Resume after Tracking Gap -> overview",
+    "Loading -> overview, Error -> retry",
+    "Income and Snapshot dialog open/save/dismiss",
+    "Fixed confirmation, Variable confirmation, cancellation of Variable confirmation",
+    "Ending Balance preserves 7,200 in previously confirmed details",
+    "Manual Close on the final-day scenario; Snapshot recording hidden afterward",
+    "History current/previous month/Tracking Gap, mobile horizontal tabs",
+    "Profile save and theme switch without resetting the active page",
+    "Add Fixed with amount 490, choose Fixed/Variable in the setup dialog",
+    "Edit Fixed to 6,500 then edit Variable while retaining the Fixed edit",
+    "Pause and resume setup items",
+    "Horizontal drag on a handle changes setup and chip ordering",
+    "Required-amount validation -> filled state -> save",
+    "Mobile fixed bottom navigation and expanded calculation"
+  ],
+  "usage_th": [
+    "นำไฟล์ .fig เข้า Figma แล้วเปิดหน้า 03 Screens & Prototype จากนั้นกด Present และเลือก flow ทางซ้าย",
+    "ฟอร์มใช้ข้อมูลตัวอย่างและสถานะที่เตรียมไว้ ไม่รับข้อมูลอิสระหรือบันทึกฐานข้อมูลจริง",
+    "จัดลำดับใน prototype โดยลาก handle ไปทางขวา เพื่อไม่ให้ gesture ถูกใช้เลื่อนหน้าจอ",
+    "ค่าตัวอย่างของแต่ละ flow อาจเริ่มใหม่เมื่อเปลี่ยนไปเล่นอีก scenario"
+  ],
+  "font_mapping": {
+    "code": "ui-sans-serif, system-ui, sans-serif",
+    "figma_latin": "Noto Sans",
+    "figma_thai": "Noto Sans Thai UI",
+    "note": "Font glyphs differ from platform system fonts."
+  },
+  "export_verification": "Genuine Figma Save local copy; ZIP CRC passed; canvas.fig signature fig-kiwi."
+}

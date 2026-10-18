@@ -1,7 +1,7 @@
 FROM node:22.23.1-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
-RUN corepack enable && corepack prepare pnpm@11.1.3 --activate
+RUN corepack enable && corepack prepare pnpm@10.34.7 --activate
 WORKDIR /app
 
 FROM base AS dependencies

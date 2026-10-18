@@ -1,0 +1,138 @@
+{
+  "components": [
+    {
+      "source": "web/src/components/app-shell.tsx",
+      "exports": [
+        "AppShell"
+      ],
+      "sha256": "f948cb2e54eacde587b86b29863b3c73d8686c5cf002de31d096247f0a57242b"
+    },
+    {
+      "source": "web/src/components/balance-dialog.tsx",
+      "exports": [
+        "BalanceDialog"
+      ],
+      "sha256": "1f9c67785dd3267c99e1fa2ef0a1216674ff6ad743223c0147f55baeb3984427"
+    },
+    {
+      "source": "web/src/components/dialog.tsx",
+      "exports": [
+        "Dialog"
+      ],
+      "sha256": "61e685b50100a24b37511198ade4f816c1974c57da03400a04da0e12afb60cbd"
+    },
+    {
+      "source": "web/src/components/expense-chips.tsx",
+      "exports": [
+        "ExpenseChips"
+      ],
+      "sha256": "73e8aaf30fbb6be67edf3ae94b3782545f07ab517b59d53cef1c9958640256cc"
+    },
+    {
+      "source": "web/src/components/expense-setup-dialog.tsx",
+      "exports": [
+        "ExpenseSetupDialog"
+      ],
+      "sha256": "14054f98a9e8ede89fe3a8665e83e3b6a14e2f28dc669b72e9aa7306b5fb2239"
+    },
+    {
+      "source": "web/src/components/expense-setup-manager.tsx",
+      "exports": [
+        "ExpenseSetupManager"
+      ],
+      "sha256": "a117249d9b3a6c6d886bee8677507669dbe84bb72bcc52a9e7636fd1f66d377e"
+    },
+    {
+      "source": "web/src/components/feedback-banner.tsx",
+      "exports": [
+        "FeedbackBanner"
+      ],
+      "sha256": "c143f54a370ee54a27df3491e576dc861844177f43c7c9409488c32bdd77a12a"
+    },
+    {
+      "source": "web/src/components/history-explorer.tsx",
+      "exports": [
+        "HistoryExplorer"
+      ],
+      "sha256": "305ad68274e8666200ea900df9fc9c1900b9bbd3fbb7b931f929c082d2e07791"
+    },
+    {
+      "source": "web/src/components/lifecycle-form.tsx",
+      "exports": [
+        "LifecycleForm"
+      ],
+      "sha256": "1043d55e1fc9dcfb43bc5e1d430dfc6e964a44e28914e8a9a775764862f9c89e"
+    },
+    {
+      "source": "web/src/components/lifecycle-page.tsx",
+      "exports": [
+        "LifecyclePage"
+      ],
+      "sha256": "e28ee11ea8bac9d1f8c2cf5879437ee53062078eb66c70bd49d8177b9f5cbf70"
+    },
+    {
+      "source": "web/src/components/local-login-form.tsx",
+      "exports": [
+        "LocalLoginForm"
+      ],
+      "sha256": "41f0dc2e97250bf4cfa7356149544f5c714aaf5bf821f1ef9c6928649ec29ffb"
+    },
+    {
+      "source": "web/src/components/money-field.tsx",
+      "exports": [
+        "MoneyField"
+      ],
+      "sha256": "f1eeb2bc54d6de569f1e1ea43250bb17024b0282d6d1d8b3de38244d6fb234ae"
+    },
+    {
+      "source": "web/src/components/month-summary.tsx",
+      "exports": [
+        "MonthSummary"
+      ],
+      "sha256": "fc933a072157d3a9040d40fd256481a548a2291d1055cc0d2baf8eee61fd0afb"
+    },
+    {
+      "source": "web/src/components/month-timeline.tsx",
+      "exports": [
+        "MonthTimeline"
+      ],
+      "sha256": "54bfd8b57697bf3021b243af764d37f30714fb643f8b8b4b12314984a30e841e"
+    },
+    {
+      "source": "web/src/components/navigation.tsx",
+      "exports": [
+        "Navigation"
+      ],
+      "sha256": "c6b92c615fe84580c3161a79306552d0578572d0a1dc4657be318b9a0de22389"
+    },
+    {
+      "source": "web/src/components/profile-form.tsx",
+      "exports": [
+        "ProfileForm"
+      ],
+      "sha256": "defc573f8c8e90342e8e5949a1151c66504f6b67ff3ee05050b20b0d8e76fd08"
+    },
+    {
+      "source": "web/src/components/status-badge.tsx",
+      "exports": [
+        "StatusBadge"
+      ],
+      "sha256": "ba60644459a96a584666e88d56ee5b0b66a9d6c925d3739fe2db7568bba1d57f"
+    },
+    {
+      "source": "web/src/components/theme-control.tsx",
+      "exports": [
+        "ThemeControl"
+      ],
+      "sha256": "6ff312f114803513a3a9cc720106d173eb000b23221837e19815d1f21be47e72"
+    }
+  ],
+  "pages": [
+    "web/src/app/history/page.tsx",
+    "web/src/app/login/page.tsx",
+    "web/src/app/month/page.tsx",
+    "web/src/app/profile/page.tsx",
+    "web/src/app/resume/page.tsx",
+    "web/src/app/start/page.tsx"
+  ]
+}

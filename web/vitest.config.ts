@@ -4,11 +4,12 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   test: {
+    fileParallelism: false,
     projects: [{
       extends: true,
       test: {
         name: "unit", include: ["tests/domain/**/*.test.ts", "tests/components/**/*.test.tsx", "tests/auth/**/*.unit.test.ts"],
-        environment: "jsdom", setupFiles: ["src/test/setup.ts"], fileParallelism: false,
+        environment: "jsdom", setupFiles: ["src/test/setup.ts"],
       },
     }],
     coverage: {
